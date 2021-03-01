@@ -27,6 +27,55 @@ SOFTWARE.
 
 #define DLMS_MAX_PDU_SIZE 1024
 
+struct invoke_id_and_priority_t
+{
+	union {
+		struct {
+			unsigned char invoke_id : 4;
+			unsigned char reserved  : 2;
+			unsigned char service_class : 1; /* 0 = Unconfirmed, 1 = Confirmed */
+			unsigned char priority  : 1;     /* 0 = Normal, 1 = High */
+		};
+
+		unsigned char byte;
+	};
+};
+
+struct cosem_attribute_descripor_t
+{
+	unsigned short class_id;
+	unsigned char  instance_id[6];
+	signed char    attribute_id;
+};
+
+struct cosem_method_descripor_t
+{
+	unsigned short class_id;
+	unsigned char  instance_id[6];
+	signed char    method_id;
+};
+
+struct get_request_normal_t
+{
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	struct cosem_attribute_descripor_t cosem_attribute_descriptor;
+};
+
+enum get_request_type_t
+{
+	get_request_normal_type = 1,
+	get_request_next_type = 2,
+	get_request_with_list_type = 3,
+};
+
+struct get_request_t
+{
+	enum get_request_type_t type;
+	union {
+		struct get_request_normal_t get_request_normal;
+	};
+};
+
 struct dlms_pdu_t
 {
 	unsigned char data[DLMS_MAX_PDU_SIZE];

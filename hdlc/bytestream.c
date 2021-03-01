@@ -90,7 +90,7 @@ int hdlc_bs_put(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame)
 	int hdr_len;
 	int i;
 	unsigned char hdr[32];
-	uint16_t hcs, fcs;
+	uint16_t /*hcs,*/ fcs;
 
 	hdlc_bs_reset(bs);
 

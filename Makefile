@@ -15,7 +15,7 @@ CC := gcc
 
 INCLUDES += -I$(CURDIR)
 
-CFLAGS := $(INCLUDES)
+CFLAGS := $(INCLUDES) -Wall
 
 app: $(OBJS)
 	$(LD) $(OBJS) $(LDFLAGS) -o $(APP)

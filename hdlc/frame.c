@@ -331,6 +331,13 @@ void hdlc_frame_print(struct hdlc_frame_t *frame)
 	}
 }
 
+
+/*
+ * Frame Format:
+ * Flag | Frame format | Dest. address | Src. address | Control | HCS | Information | FCS | Flag
+ *
+ * Flag = 0x7E
+ */
 int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 {
 	int ret;
@@ -338,9 +345,8 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 	unsigned char *p = frm;
 	unsigned int length = bs->length;
 	unsigned int s = length;
-	uint16_t hcs = FCS16_INIT_VALUE;
+	//uint16_t hcs = FCS16_INIT_VALUE;
 	int hcs_index = 0;
-	int i;
 
 	//printf("hdlc_frame_parse length: %u\n", length);
 
@@ -416,8 +422,15 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 	if (s > 0)
 	{
 		hcs_index = p - frm + 2;
-		frame->info = p;
-		frame->info_len = s - 2; // Truncate two FCS bytes
+		if (hcs_index >= length) {
+			hcs_index = 0;
+			frame->info_len = s - 2; // Truncate two FCS bytes
+			frame->info     = p;
+		}
+		else {
+			frame->info_len = s - (2 /* HCS */ + 2 /* FCS */); // Truncate two FCS bytes and two HCS bytes
+			frame->info     = p + 2; // Skip two bytes of HCS (Header check sequence)
+		}
 	}
 	else
 	{

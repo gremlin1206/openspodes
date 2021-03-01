@@ -61,14 +61,13 @@ int main(void)
 
 #if !DEBUG
 	struct sockaddr_un addr;
-	unsigned int i;
-	
+
 	if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 	{
 		perror("socket error");
 		exit(-1);
 	}
-	
+
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
 	strncpy(addr.sun_path, "/tmp/vboxcom1", sizeof(addr.sun_path)-1);
@@ -79,7 +78,7 @@ int main(void)
 		exit(-1);
 	}
 #endif
-	
+
 	hdlc_init(&hdlc);
 	hdlc.sendfn = sendfn;
 	hdlc.hdlc_address.len = 2;
@@ -87,6 +86,7 @@ int main(void)
 	hdlc.hdlc_address.lower = 16;
 
 	dlms_init(&dlms);
+	hdlc.dlms = &dlms;
 
 #if !DEBUG
 	while (1)
@@ -109,6 +109,6 @@ int main(void)
 #if !DEBUG
 	}
 #endif
-	
+
 	return 0;
 }

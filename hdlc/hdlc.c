@@ -27,6 +27,8 @@ SOFTWARE.
 #include <string.h>
 #include <time.h>
 
+#include <dlms/dlms.h>
+
 #include "hdlc.h"
 
 #define HDLC_BYTE_TIMEOUT_MS 500
@@ -195,14 +197,12 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 {
 	printf("I command received\n");
 
-	if (ctx->state == HDLC_STATE_NDM)
-	{
+	if (ctx->state == HDLC_STATE_NDM) {
 		hdlc_send_dm_response(ctx, frame);
 		return HDLC_OK;
 	}
 
-	if (ctx->nr != frame->control.ns)
-	{
+	if (ctx->nr != frame->control.ns) {
 		hdlc_send_rr_response(ctx, frame);
 		return HDLC_OK;
 	}
@@ -212,13 +212,9 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 	ctx->nr = (frame->control.ns + 1) & 0x7;
 
 	if (!frame->format.S)
-	{
 		hdlc_send_i_response(ctx, frame);
-	}
 	else
-	{
 		hdlc_send_rr_response(ctx, frame);
-	}
 
 	return HDLC_OK;
 }
