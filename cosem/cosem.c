@@ -22,27 +22,50 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_DLMS_H
-#define OPENSPODES_DLMS_H
+#include <stdio.h>
+#include <string.h>
 
-#define DLMS_MAX_PDU_SIZE 1024
+#include <dlms/dlms.h>
 
-struct cosem_ctx_t;
+#include "cosem.h"
 
-struct dlms_pdu_t
+#if 0
+static void cosem_append_llc_response(struct dlms_pdu_t *pdu)
 {
-	unsigned char data[DLMS_MAX_PDU_SIZE];
-	unsigned int length;
-};
+	unsigned char *p = &pdu->data[pdu->length];
 
-struct dlms_ctx_t
+	pdu->length += 3;
+	p[0] = LLC_REMOTE_LSAP;
+	p[1] = LLC_LOCAL_LSAP_RESPONSE;
+	p[3] = 0;
+}
+
+static void cosem_append_error(struct dlms_pdu_t *pdu, enum cosem_error_service_t service, enum cosem_error_t error)
 {
-	struct dlms_pdu_t pdu;
-	struct cosem_ctx_t *cosem;
-};
+	unsigned char *p = &pdu->data[pdu->length];
 
-int dlms_init(struct dlms_ctx_t *ctx);
-int dlms_input(struct dlms_ctx_t *ctx, unsigned char *p, unsigned int len, int more);
-void dlms_drop_pdu(struct dlms_ctx_t *ctx);
+	pdu->length += 4;
+	p[0] = apdu_tag_confirmed_service_error;
+	p[1] = (unsigned char)service;
+	p[2] = (unsigned char)(error >> 8);
+	p[3] = (unsigned char)(error & 0xFF);
+}
 
-#endif /* OPENSPODES_DLMS_H */
+static void cosem_append_exception(struct dlms_pdu_t *pdu)
+{
+	unsigned char *p = &pdu->data[pdu->length];
+
+	pdu->length += 4;
+	p[0] = apdu_tag_exception_response;
+}
+#endif
+
+int cosem_process_get_request(struct cosem_ctx_t *ctx, struct dlms_pdu_t *pdu, const struct get_request_t *request)
+{
+	pdu->length = 0;
+
+	//cosem_append_llc_response(pdu);
+	//cosem_append_error(pdu, cosem_error_read, cosem_error_access_object_access_violated);
+
+	return -1;
+}

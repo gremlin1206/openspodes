@@ -22,39 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "dlms.h"
-
 #include <stdio.h>
 #include <string.h>
 
-#define LLC_REMOTE_LSAP         0xE6
-#define LLC_LOCAL_LSAP_REQUEST  0xE6
-#define LLC_LOCAL_LSAP_RESPONSE 0xE6
-#define LLC_HEADER_LENGTH       3
+#include <cosem/cosem.h>
 
-enum apdu_tag_t
-{
-	apdu_tag_aa_request                  = 0x60,
-	apdu_tag_aa_response                 = 0x61,
-	apdu_tag_get_request                 = 0xC0,
-	apdu_tag_set_request                 = 0xC1,
-	apdu_tag_event_notification_request  = 0xC2,
-	apdu_tag_action_request              = 0xC3,
-	apdu_tag_get_response                = 0xC4,
-	apdu_tag_set_response                = 0xC5,
-	apdu_tag_action_response             = 0xC7,
-	apdu_tag_glo_get_request             = 0xC8,
-	apdu_tag_glo_set_request             = 0xC9,
-	apdu_tag_event_notification_response = 0xCA,
-	apdu_tag_glo_action_request          = 0xCB,
-	apdu_tag_glo_get_response            = 0xCC,
-	apdu_tag_glo_set_response            = 0xCD,
-	apdu_tag_glo_action_response         = 0xCF,
-};
-
-//static const unsigned char llc_pdu_request_hdr[] = {
-//		0xE6, 0xE6, 0x00
-//};
+#include "dlms.h"
 
 static int asn_decode_length(unsigned int *out, const unsigned char **buffer, unsigned int *len)
 {
@@ -121,43 +94,60 @@ static int dlms_process_aa_request(struct dlms_ctx_t *ctx, const unsigned char *
 //   00 00 28 00 00 FF instance-id
 //   01 attribute-id
 //   00 access-selection (00 means not present)
-static int dlms_process_get_request(struct dlms_ctx_t *ctx, unsigned char *p, unsigned int len)
+static int dlms_parse_get_request(struct get_request_t *request, unsigned char *p, unsigned int len)
 {
-	unsigned int get_type;
-	unsigned int invoke_id_and_priority;
-	unsigned int invoke_id;
-	unsigned int priority;
-	unsigned int service_class;
-	unsigned int class_id;
-	const unsigned char *instance_id;
-	unsigned int attribute_id;
+	unsigned short class_id;
+
+	printf("parce get request len: %u\n", len);
 
 	if (len < 12)
 		return -1;
 
-	get_type = *p; p++;
+	request->type = *p; p++;
+	request->invoke_id_and_priority.byte = *p; p++;
 
-	invoke_id_and_priority = *p; p++;
-	invoke_id     = invoke_id_and_priority & 0x0F;
-	service_class = (invoke_id_and_priority >> 6) & 0x01;
-	priority      = (invoke_id_and_priority >> 7) & 0x01;
+	printf("  type: %i\n", request->type);
 
-	class_id  = *p; p++;
-	class_id <<= 8;
-	class_id |= *p; p++;
+	switch (request->type) {
+	case get_request_normal_type:
+		class_id  = *p; p++;
+		class_id <<= 8;
+		class_id |= *p; p++;
+		request->get_request_normal.cosem_attribute_descriptor.class_id = class_id;
+		memcpy(request->get_request_normal.cosem_attribute_descriptor.instance_id, p, 6); p += 6;
+		request->get_request_normal.cosem_attribute_descriptor.attribute_id = *p; p++;
+		break;
 
-	instance_id = p; p += 6;
+	case get_request_next_type:
+		break;
 
-	attribute_id = *p; p++;
+	case get_request_with_list_type:
+		break;
 
+	default:
+		return -1;
+	}
 
+	printf("return ok\n");
 
 	return 0;
 }
 
-static int dlms_process_apdu(struct dlms_ctx_t *ctx, unsigned char *p, unsigned int len)
+static int dlms_process_get_request(struct dlms_ctx_t *ctx, unsigned char *p, unsigned int len)
 {
 	int ret;
+	struct get_request_t request;
+
+	ret = dlms_parse_get_request(&request, p, len);
+	if (ret < 0)
+		return ret;
+
+	return cosem_process_get_request(ctx->cosem, &ctx->pdu, &request);
+}
+
+static int dlms_process_apdu(struct dlms_ctx_t *ctx, unsigned char *p, unsigned int len)
+{
+	//int ret;
 	unsigned int i;
 	unsigned char tag;
 
@@ -204,20 +194,24 @@ int dlms_input(struct dlms_ctx_t *ctx, unsigned char *p, unsigned int len, int m
 	unsigned int pdu_length = ctx->pdu.length;
 	int ret;
 
-	if (pdu_length + len > DLMS_MAX_PDU_SIZE)
-	{
+	if (pdu_length + len > DLMS_MAX_PDU_SIZE) {
+		dlms_drop_pdu(ctx);
 		return -1;
 	}
 
 	memcpy(&ctx->pdu.data[pdu_length], p, len);
 	ctx->pdu.length = pdu_length + len;
 
-	ret = 0;
-
 	if (!more) {
 		ret = dlms_process_llc(ctx, ctx->pdu.data, len);
-		ctx->pdu.length = 0;
+		if (ret < 0)
+			return ret;
 	}
 
-	return ret;
+	return more;
+}
+
+void dlms_drop_pdu(struct dlms_ctx_t *ctx)
+{
+	ctx->pdu.length = 0;
 }

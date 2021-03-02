@@ -95,10 +95,10 @@ static void hdlc_send_rr_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *f
 	ctx->sendfn(ctx, ctx->out_bs.frame, ctx->out_bs.length);
 }
 
-static void hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
+static void hdlc_send_i_response(struct hdlc_ctx_t *ctx, const unsigned char *data, unsigned int length, struct hdlc_frame_t *frame)
 {
 	struct hdlc_frame_t response;
-	printf("Send RR response\n");
+	printf("Send I response\n");
 
 	memset(&response, 0, sizeof(response));
 
@@ -111,6 +111,9 @@ static void hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *fr
 	response.dest_address = frame->src_address;
 	response.src_address  = ctx->hdlc_address;
 
+	response.info = (unsigned char*)data;
+	response.info_len = length;
+
 	hdlc_bs_put(&ctx->out_bs, &response);
 	ctx->sendfn(ctx, ctx->out_bs.frame, ctx->out_bs.length);
 }
@@ -118,7 +121,7 @@ static void hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *fr
 static void hdlc_send_frmr_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 {
 	struct hdlc_frame_t response;
-	printf("Send RR response\n");
+	printf("Send FRMR response\n");
 
 	memset(&response, 0, sizeof(response));
 
@@ -137,6 +140,8 @@ static void hdlc_send_frmr_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t 
 
 static void hdlc_disconnect(struct hdlc_ctx_t *ctx)
 {
+	dlms_drop_pdu(ctx->dlms);
+
 	hdlc_bs_reset(&ctx->in_bs);
 	hdlc_bs_reset(&ctx->out_bs);
 
@@ -195,6 +200,8 @@ static int hdlc_cmd_rr(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 
 static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 {
+	int ret;
+
 	printf("I command received\n");
 
 	if (ctx->state == HDLC_STATE_NDM) {
@@ -207,12 +214,16 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 		return HDLC_OK;
 	}
 
-	dlms_input(ctx->dlms, frame->info, frame->info_len, frame->format.S);
+	ret = dlms_input(ctx->dlms, frame->info, frame->info_len, frame->format.S);
+	if (ret < 0)
+		return HDLC_ABORT_RECEIVE;
 
 	ctx->nr = (frame->control.ns + 1) & 0x7;
 
-	if (!frame->format.S)
-		hdlc_send_i_response(ctx, frame);
+	if (ret == 0) {
+		hdlc_send_i_response(ctx, ctx->dlms->pdu.data, ctx->dlms->pdu.length, frame);
+		dlms_drop_pdu(ctx->dlms);
+	}
 	else
 		hdlc_send_rr_response(ctx, frame);
 

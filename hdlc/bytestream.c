@@ -89,21 +89,20 @@ int hdlc_bs_put(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame)
 	int ret;
 	int hdr_len;
 	int i;
+	unsigned int info_len;
 	unsigned char hdr[32];
-	uint16_t /*hcs,*/ fcs;
+	unsigned short hcs, fcs;
 
 	hdlc_bs_reset(bs);
 
 	ret = hdlc_bs_insert(bs, HDLC_FLAG_SEQUENCE);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		printf("fail to insert frame start\n");
 		return ret;
 	}
 
 	ret = hdlc_frame_encode_hdr(hdr, sizeof(hdr), frame);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		printf("fail to encode frame header\n");
 		return ret;
 	}
@@ -112,8 +111,7 @@ int hdlc_bs_put(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame)
 
 	hdr_len = ret;
 	printf("header length: %i\n", hdr_len);
-	for (i = 0; i < hdr_len; i++)
-	{
+	for (i = 0; i < hdr_len; i++) {
 		unsigned char b = hdr[i];
 		fcs = fcs16(fcs, b);
 
@@ -122,9 +120,39 @@ int hdlc_bs_put(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame)
 			return ret;
 	}
 
-	fcs ^= 0xFFFF;
+	info_len = frame->info_len;
+	if (info_len > 0) {
+		const unsigned char *p;
 
-	ret = hdlc_bs_insert_fcs(bs, fcs);
+		hcs = fcs ^ 0xFFFF;
+
+		ret = hdlc_bs_insert_fcs(bs, hcs);
+		if (ret < 0)
+			return ret;
+
+		fcs = fcs16(fcs, (unsigned char)(hcs & 0xFF));
+		fcs = fcs16(fcs, (unsigned char)(hcs >> 8));
+
+		p = frame->info;
+
+		/*
+		 * Send info field
+		 */
+		while (info_len > 0) {
+			unsigned char b = *p;
+
+			ret = hdlc_bs_insert(bs, b);
+			if (ret < 0)
+				return ret;
+
+			fcs = fcs16(fcs, b);
+
+			p++;
+			info_len--;
+		}
+	}
+
+	ret = hdlc_bs_insert_fcs(bs, fcs ^ 0xFFFF);
 	if (ret < 0)
 		return ret;
 

@@ -8,6 +8,8 @@ OBJS += hdlc/hdlc.o
 
 OBJS += dlms/dlms.o
 
+OBJS += cosem/cosem.o
+
 APP := spodes
 
 LD := gcc

@@ -424,8 +424,8 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 		hcs_index = p - frm + 2;
 		if (hcs_index >= length) {
 			hcs_index = 0;
-			frame->info_len = s - 2; // Truncate two FCS bytes
-			frame->info     = p;
+			frame->info_len = 0; // No info field
+			frame->info     = 0;
 		}
 		else {
 			frame->info_len = s - (2 /* HCS */ + 2 /* FCS */); // Truncate two FCS bytes and two HCS bytes
@@ -453,6 +453,7 @@ int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int hdr_len, struct hdlc_
 	int ret;
 	unsigned char *p, *pformat;
 	unsigned int length;
+	unsigned int frame_length;
 
 	p = hdr;
 
@@ -461,6 +462,10 @@ int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int hdr_len, struct hdlc_
 	pformat = p;
 	p += 2;
 	length = 2;
+	hdr_len -= 2;
+
+	if (hdr_len < 4)
+		return -1;
 
 	ret = hdlc_put_address_type(p, frame->dest_address);
 	if (ret < 0)
@@ -470,6 +475,10 @@ int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int hdr_len, struct hdlc_
 	}
 	length += ret;
 	p += ret;
+	hdr_len -= ret;
+
+	if (hdr_len < 4)
+		return -1;
 
 	ret = hdlc_put_address_type(p, frame->src_address);
 	if (ret < 0)
@@ -479,6 +488,10 @@ int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int hdr_len, struct hdlc_
 	}
 	length += ret;
 	p += ret;
+	hdr_len -= ret;
+
+	if (hdr_len < 1)
+		return -1;
 
 	ret = hdlc_put_control_type(p, frame->control);
 	if (ret < 0)
@@ -486,7 +499,12 @@ int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int hdr_len, struct hdlc_
 	length += ret;
 	p += ret;
 
-	ret = hdlc_put_format_type(pformat, frame->format, length + 2);
+	frame_length = length + 2;
+	if (frame->info_len > 0) {
+		frame_length += frame->info_len + 2;
+	}
+
+	ret = hdlc_put_format_type(pformat, frame->format, frame_length);
 	if (ret < 0)
 		return ret;
 

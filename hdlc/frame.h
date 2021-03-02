@@ -74,9 +74,6 @@ struct hdlc_frame_t
 
   unsigned char *info;
   unsigned int info_len;
-
-  uint16_t hcs;
-  uint16_t fcs;
 };
 
 #ifdef __cplusplus

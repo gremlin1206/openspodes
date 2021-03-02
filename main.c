@@ -6,12 +6,19 @@
 
 #include <hdlc/hdlc.h>
 #include <dlms/dlms.h>
+#include <cosem/cosem.h>
 
 int fd;
 
 static int sendfn(struct hdlc_ctx_t *ctx, uint8_t *bytes, uint32_t length)
 {
-	printf("send data %u\n", length);
+	uint32_t i;
+	printf("send data %u:\n", length);
+
+	for (i = 0; i < length; i++)
+		printf("%02X ", bytes[i]);
+	printf("\n");
+
 	return write(fd, bytes, length);
 }
 
@@ -57,7 +64,22 @@ int main(void)
 {
 	struct hdlc_ctx_t hdlc;
 	struct dlms_ctx_t dlms;
+	struct cosem_ctx_t cosem;
 	int ret;
+
+#if 0
+	unsigned char buf[] = {/*0x7E,*/ 0xA0, 0x08, 0x21, 0x02, 0x21, 0x10, 0x57, 0x21, 0xE6, 0xE7, 0x00, 0x0E, 0x05, 0x05, 0x02, 0x57, 0x21/*, 0x7E*/};
+	struct hdlc_frame_t f;
+	struct hdlc_bs_t bs;
+
+	bs.frame = buf;
+	bs.length = sizeof(buf);
+
+	ret = hdlc_frame_parse(&f, &bs);
+	printf("ret: %i\n", ret);
+
+	return 0;
+#endif
 
 #if !DEBUG
 	struct sockaddr_un addr;
@@ -79,14 +101,15 @@ int main(void)
 	}
 #endif
 
+	dlms_init(&dlms);
+	dlms.cosem = &cosem;
+
 	hdlc_init(&hdlc);
+	hdlc.dlms = &dlms;
 	hdlc.sendfn = sendfn;
 	hdlc.hdlc_address.len = 2;
 	hdlc.hdlc_address.upper = 1;
 	hdlc.hdlc_address.lower = 16;
-
-	dlms_init(&dlms);
-	hdlc.dlms = &dlms;
 
 #if !DEBUG
 	while (1)
