@@ -129,6 +129,82 @@ struct cosem_method_descripor_t
 	signed char    method_id;
 };
 
+struct application_context_name_t
+{
+	unsigned int value;
+};
+
+struct acse_requirements_t
+{
+	unsigned short value;
+};
+
+struct mechanism_name_t
+{
+	unsigned int value;
+};
+
+struct calling_authentication_t
+{
+	unsigned char key[16];
+	unsigned char length;
+};
+
+struct conformance_t
+{
+	unsigned char reserved;
+
+	unsigned char reserved_seven : 1;
+	unsigned char reserved_six : 1;
+	unsigned char unconfirmed_write : 1;
+	unsigned char write : 1;
+	unsigned char read : 1;
+	unsigned char general_block_transfer : 1;
+	unsigned char general_protection : 1;
+	unsigned char reserved_zero : 1;
+
+	unsigned char information_report : 1;
+	unsigned char multiple_references : 1;
+	unsigned char block_transfer_with_action : 1;
+	unsigned char block_transfer_with_set_or_write : 1;
+	unsigned char block_transfer_with_get_or_read : 1;
+	unsigned char attribute0_supported_with_get : 1;
+	unsigned char priority_mgmt_supported : 1;
+	unsigned char attribute0_supported_with_set : 1;
+
+	unsigned char action : 1;
+	unsigned char event_notification : 1;
+	unsigned char selective_access : 1;
+	unsigned char set : 1;
+	unsigned char get : 1;
+	unsigned char parameterized_access : 1;
+	unsigned char access : 1;
+	unsigned char data_notification : 1;
+};
+
+struct initiate_request_t
+{
+	unsigned char proposed_dlms_version_number;
+	struct conformance_t proposed_conformance;
+	unsigned short server_max_receive_pdu_size;
+};
+
+struct aa_request_t
+{
+	struct application_context_name_t application_context_name;
+	struct acse_requirements_t acse_requirements;
+	struct mechanism_name_t mechanism_name;
+	struct calling_authentication_t calling_authentication;
+	struct initiate_request_t initiate_request;
+};
+
+enum association_result_t
+{
+	association_result_accepted = 0,
+	association_result_rejected_permanent = 1,
+	association_result_rejected_transient = 2,
+};
+
 struct get_request_normal_t
 {
 	struct cosem_attribute_descripor_t cosem_attribute_descriptor;

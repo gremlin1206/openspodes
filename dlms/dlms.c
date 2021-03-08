@@ -29,7 +29,7 @@ SOFTWARE.
 
 #include "dlms.h"
 
-static int asn_decode_length(unsigned int *out, const unsigned char **buffer, unsigned int *len)
+static int asn_get_length(unsigned int *out, const unsigned char **buffer, unsigned int *len)
 {
 	unsigned int length = *len;
 	unsigned int result;
@@ -40,15 +40,12 @@ static int asn_decode_length(unsigned int *out, const unsigned char **buffer, un
 	if (length < 1)
 		return -1;
 
-	byte = p[0];
+	byte = p[0]; length--; p++;
 
 	if ((byte & 0x80) == 0) {
 		result = byte;
 	}
 	else {
-		length--;
-		p++;
-
 		bytes = byte & ~0x80;
 		if (bytes > length || bytes > 4)
 			return -1;
@@ -66,6 +63,11 @@ static int asn_decode_length(unsigned int *out, const unsigned char **buffer, un
 		}
 	}
 
+	printf("result %u, length: %u\n", result, length);
+
+	if (result > length)
+		return -1;
+
 	*out = result;
 	*buffer = p;
 	*len = length;
@@ -73,14 +75,345 @@ static int asn_decode_length(unsigned int *out, const unsigned char **buffer, un
 	return 0;
 }
 
-static int dlms_process_aa_request(struct dlms_ctx_t *ctx, const unsigned char *p, unsigned int len)
+static int asn_get_uint16(unsigned short *out, const unsigned char **buffer, unsigned int *length)
+{
+	unsigned short result;
+	const unsigned char *p = *buffer;
+
+	if (*length < 2)
+		return -1;
+
+	result = p[0];
+	result <<= 8;
+	result |= p[1];
+
+	*out = result;
+
+	*length -= 2;
+	*buffer += 2;
+
+	return 0;
+}
+
+static int asn_get_uint8(unsigned char *out, const unsigned char **buffer, unsigned int *length)
+{
+	const unsigned char *p = *buffer;
+
+	if (*length < 1)
+		return -1;
+
+	*out = p[0];
+
+	*length -= 1;
+	*buffer += 1;
+
+	return 0;
+}
+
+static int asn_get_buffer(void *out, unsigned int bytes, const unsigned char **buffer, unsigned int *length)
+{
+	if (bytes > *length)
+		return -1;
+
+	memcpy(out, *buffer, bytes); *buffer += bytes; *length -= bytes;
+
+	return 0;
+}
+
+static const unsigned char application_context_name_preamble[] = {
+	0x09, 0x06, 0x07, 0x60, 0x85, 0x74
+};
+
+static const unsigned char mechanism_name_preamble[] = {
+	0x07, 0x60, 0x85, 0x74
+};
+
+static int dlms_decode_application_context_name(struct application_context_name_t *out, const unsigned char **buffer, unsigned int *length)
+{
+	const unsigned char *p = *buffer;
+	unsigned int len = *length;
+
+	printf("dlms_decode_application_context_name\n");
+
+	if (len < 10)
+		return -1;
+
+	if (memcmp(p, application_context_name_preamble, sizeof(application_context_name_preamble)) != 0)
+		return -1;
+
+	memcpy(out, p + sizeof(application_context_name_preamble), 4);
+
+	*buffer += 10;
+	*length -= 10;
+
+	return 0;
+}
+
+static int dlms_encode_application_context_name(unsigned char *buffer, const struct application_context_name_t *name)
+{
+	unsigned char *p = buffer;
+
+	printf("dlms_encode_application_context_name\n");
+
+	p[0] = 0xA1; p++;
+
+	memcpy(p, application_context_name_preamble, sizeof(application_context_name_preamble));
+	p += sizeof(application_context_name_preamble);
+
+	memcpy(p, name, sizeof(*name));
+
+	return 1 + sizeof(application_context_name_preamble) + sizeof(*name);
+}
+
+static int dlms_encode_association_result(unsigned char *buffer, enum association_result_t result)
+{
+
+}
+
+static int dlms_decode_acse_requirements(struct acse_requirements_t *out, const unsigned char **buffer, unsigned int *length)
+{
+	const unsigned char *p = *buffer;
+	unsigned int len = *length;
+
+	printf("dlms_decode_acse_requirements\n");
+
+	if (len < 3)
+		return -1;
+
+	if (p[0] != 2)
+		return -1;
+
+	memcpy(out, p + 1, 2);
+
+	*buffer += 3;
+	*length -= 3;
+
+	return 0;
+}
+
+static int dlms_decode_mechanism_name(struct mechanism_name_t *out, const unsigned char **buffer, unsigned int *length)
+{
+	const unsigned char *p = *buffer;
+
+	printf("dlms_decode_mechanism_name\n");
+
+	if (*length < 8)
+		return -1;
+
+	if (memcmp(p, mechanism_name_preamble, sizeof(mechanism_name_preamble)) != 0)
+		return -1;
+
+	memcpy(out, p + sizeof(mechanism_name_preamble), 4);
+
+	*buffer += 8;
+	*length -= 8;
+
+	return 0;
+}
+
+static int dlms_decode_calling_authentication(struct calling_authentication_t *out, const unsigned char **buffer, unsigned int *length)
 {
 	int ret;
-	unsigned int data_length;
+	unsigned int block_length;
+	const unsigned char* block_buffer;
+	unsigned char tag;
+
+	printf("dlms_decode_calling_authentication\n");
+
+	ret = asn_get_length(&block_length, buffer, length);
+	if (ret < 0)
+		return ret;
+
+	block_buffer = *buffer;
+	*buffer += block_length;
+	*length -= block_length;
+
+	ret = asn_get_uint8(&tag, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	switch (tag)
+	{
+	case 0x80:
+		break;
+
+	case 0x81:
+		break;
+
+	default:
+		printf("unknown tag 0x%02X in calling authentication\n", tag);
+		return -1;
+	}
+
+	ret = asn_get_length(&block_length, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (block_length > sizeof(out->key))
+		return -1;
+
+	memcpy(out->key, block_buffer, block_length);
+	out->length = (unsigned char)block_length;
+
+	return 0;
+}
+
+static int dlms_decode_initiate_request(struct initiate_request_t *out, const unsigned char **buffer, unsigned int *length)
+{
+	int ret;
+	unsigned int block_length;
+	const unsigned char *block_buffer;
+	unsigned char tag;
+	unsigned char option;
+	unsigned int len;
+
+	printf("dlms_decode_initiate_request\n");
+
+	ret = asn_get_length(&block_length, buffer, length);
+	if (ret < 0)
+		return ret;
+
+	block_buffer = *buffer;
+	*buffer += block_length;
+	*length -= block_length;
+
+	ret = asn_get_uint8(&tag, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (tag != 0x04)
+		return -1;
+
+	ret = asn_get_length(&block_length, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	ret = asn_get_uint8(&tag, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (tag != 0x01)
+		return -1;
+
+	ret = asn_get_uint8(&option, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (option != 0)
+		return -1;
+
+	ret = asn_get_uint8(&option, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (option != 0)
+		return -1;
+
+	ret = asn_get_uint8(&option, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (option != 0)
+		return -1;
+
+	ret = asn_get_uint8(&out->proposed_dlms_version_number, &block_buffer, &block_length);
+	if (ret < 0)
+		return -1;
+
+	ret = asn_get_uint8(&tag, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (tag != 0x5F)
+		return -1;
+
+	ret = asn_get_uint8(&tag, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (tag != 0x1F)
+		return -1;
+
+	ret = asn_get_length(&len, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	if (len != sizeof(out->proposed_conformance))
+		return -1;
+
+	ret = asn_get_buffer(&out->proposed_conformance, sizeof(out->proposed_conformance), &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	ret = asn_get_uint16(&out->server_max_receive_pdu_size, &block_buffer, &block_length);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static int dlms_decode_aa_request(struct aa_request_t *request, const unsigned char *buffer, unsigned int length)
+{
+	int ret;
+	unsigned char tag;
 
 	printf("AARQ\n");
 
-	ret = asn_decode_length(&data_length, &p, &len);
+	ret = asn_get_length(&length, &buffer, &length);
+	if (ret < 0) {
+		printf("dlms_decode_aa_request fail to get length\n");
+		return ret;
+	}
+
+	printf("\tlen: %u\n", length);
+
+	while (length > 0) {
+		ret = asn_get_uint8(&tag, &buffer, &length);
+		if (ret < 0)
+			return ret;
+
+		switch (tag) {
+		case 0xA1: // EXPLICIT
+			ret = dlms_decode_application_context_name(&request->application_context_name, &buffer, &length);
+			break;
+
+		case 0x8A: // IMPLICIT
+			ret = dlms_decode_acse_requirements(&request->acse_requirements, &buffer, &length);
+			break;
+
+		case 0x8B: // IMPLICIT
+			ret = dlms_decode_mechanism_name(&request->mechanism_name, &buffer, &length);
+			break;
+
+		case 0xAC: // EXPLICIT
+			ret = dlms_decode_calling_authentication(&request->calling_authentication, &buffer, &length);
+			break;
+
+		case 0xBE: // EXPLICIT
+			ret = dlms_decode_initiate_request(&request->initiate_request, &buffer, &length);
+			break;
+
+		default:
+			printf("unknown tag: 0x%02X\n", tag);
+			ret = -1;
+			break;
+		}
+
+		if (ret < 0) {
+			printf("fail to decode tag: 0x%02X\n", tag);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int dlms_process_aa_request(struct dlms_ctx_t *ctx, const unsigned char *p, unsigned int len)
+{
+	int ret;
+	struct aa_request_t request;
+
+	ret = dlms_decode_aa_request(&request, p, len);
 	if (ret < 0)
 		return ret;
 
@@ -185,6 +518,28 @@ static int dlms_process_llc(struct dlms_ctx_t *ctx, unsigned char *p, unsigned i
 
 int dlms_init(struct dlms_ctx_t *ctx)
 {
+	struct aa_request_t aa;
+	static const unsigned char buffer[] = {
+			/*0x60,*/ 0x34,
+			0xA1, 0x09, 0x06, 0x07, 0x60, 0x85, 0x74, 0x05, 0x08, 0x01, 0x01,
+			0x8A, 0x02, 0x07, 0x80,
+			0x8B, 0x07, 0x60, 0x85, 0x74, 0x05, 0x08, 0x02, 0x01,
+			0xAC, 0x08, 0x80, 0x06, 0x52, 0x65, 0x61, 0x64, 0x65, 0x72,
+			0xBE, 0x10,
+			  0x04, 0x0E,
+			    0x01,
+			      0x00,
+			      0x00,
+			      0x00,
+			      0x06,
+			      0x5F, 0x1F,
+			        0x04, 0x00, 0x00, 0x10, 0x1C,
+			      0xFF, 0xFF
+	};
+
+	int ret = dlms_decode_aa_request(&aa, buffer, sizeof(buffer));
+	printf("decode ret: %i\n", ret);
+
 	ctx->pdu.length = 0;
 	return 0;
 }
