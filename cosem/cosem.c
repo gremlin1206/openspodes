@@ -60,6 +60,43 @@ static void cosem_append_exception(struct dlms_pdu_t *pdu)
 }
 #endif
 
+int cosem_process_aa_request(struct cosem_ctx_t *ctx, struct aarq_t *aarq, struct aare_t *aare)
+{
+/*
+	aare.application_context_name.value = 0x01010805;
+	aare.association_result = association_result_accepted;
+	aare.acse_service_user = 0;
+	aare.acse_service_provider = -1;
+	aare.initiate_response.negotiated_dlms_version_number = 6;
+	aare.initiate_response.negotiated_conformance.selective_access = 1;
+	aare.initiate_response.negotiated_conformance.set = 1;
+	aare.initiate_response.negotiated_conformance.get = 1;
+	aare.initiate_response.negotiated_conformance.block_transfer_with_get_or_read = 1;
+	aare.initiate_response.server_max_receive_pdu_size = 0x400;
+	aare.initiate_response.vaa_name = 7;
+ */
+
+	aare->application_context_name = aarq->application_context_name;
+
+	aare->association_result = association_result_accepted;
+
+	aare->acse_service_user = 0;
+	aare->acse_service_provider = -1;
+
+	aare->initiate_response.negotiated_dlms_version_number = 6;
+
+	aare->initiate_response.negotiated_conformance.selective_access = 1;
+	aare->initiate_response.negotiated_conformance.set = 1;
+	aare->initiate_response.negotiated_conformance.get = 1;
+	aare->initiate_response.negotiated_conformance.block_transfer_with_get_or_read = 1;
+
+	aare->initiate_response.server_max_receive_pdu_size = 0x400;
+
+	aare->initiate_response.vaa_name = 7;
+
+	return 0;
+}
+
 int cosem_process_get_request(struct cosem_ctx_t *ctx, struct dlms_pdu_t *pdu, const struct get_request_t *request)
 {
 	pdu->length = 0;

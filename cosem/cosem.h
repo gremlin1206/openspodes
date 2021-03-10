@@ -189,13 +189,12 @@ struct initiate_request_t
 	unsigned short server_max_receive_pdu_size;
 };
 
-struct aa_request_t
+struct initiate_response_t
 {
-	struct application_context_name_t application_context_name;
-	struct acse_requirements_t acse_requirements;
-	struct mechanism_name_t mechanism_name;
-	struct calling_authentication_t calling_authentication;
-	struct initiate_request_t initiate_request;
+	unsigned char negotiated_dlms_version_number;
+	struct conformance_t negotiated_conformance;
+	unsigned short server_max_receive_pdu_size;
+	unsigned short vaa_name;
 };
 
 enum association_result_t
@@ -203,6 +202,32 @@ enum association_result_t
 	association_result_accepted = 0,
 	association_result_rejected_permanent = 1,
 	association_result_rejected_transient = 2,
+};
+
+enum acse_service_user_t
+{
+	acse_service_user_null,
+	acse_service_user_no_reason_given,
+	acse_service_user_application_context_name_not_supported,
+	acse_service_user_calling_AP_title_not_recognized,
+	acse_service_user_calling_AP_invocation_identifier_not_recognized,
+	acse_service_user_calling_AE_qualifier_not_recognized,
+	acse_service_user_calling_AE_invocation_identifier_not_recognized,
+	acse_service_user_called_AP_title_not_recognized,
+	acse_service_user_called_AP_invocation_identifier_not_recognized,
+	acse_service_user_called_AE_qualifier_not_recognized,
+	acse_service_user_called_AE_invocation_identifier_not_recognized,
+	acse_service_user_authentication_mechanism_name_not_recognised,
+	acse_service_user_authentication_mechanism_name_required,
+	acse_service_user_authentication_failure,
+	acse_service_user_authentication_required,
+};
+
+enum acse_service_provider_t
+{
+	acse_service_provider_null,
+	acse_service_provider_no_reason_given,
+	no_common_acse_version,
 };
 
 struct get_request_normal_t
@@ -215,6 +240,24 @@ enum get_request_type_t
 	get_request_normal_type = 1,
 	get_request_next_type = 2,
 	get_request_with_list_type = 3,
+};
+
+struct aarq_t
+{
+	struct application_context_name_t application_context_name;
+	struct acse_requirements_t acse_requirements;
+	struct mechanism_name_t mechanism_name;
+	struct calling_authentication_t calling_authentication;
+	struct initiate_request_t initiate_request;
+};
+
+struct aare_t
+{
+	struct application_context_name_t application_context_name; // A1
+	enum association_result_t         association_result;       // A2
+	enum acse_service_user_t          acse_service_user;        // A3
+	enum acse_service_provider_t      acse_service_provider;    // A3
+	struct initiate_response_t        initiate_response;        // BE
 };
 
 struct get_request_t
@@ -231,6 +274,7 @@ struct cosem_ctx_t
 	int associated;
 };
 
+int cosem_process_aa_request(struct cosem_ctx_t *ctx, struct aarq_t *aarq, struct aare_t *aare);
 int cosem_process_get_request(struct cosem_ctx_t *ctx, struct dlms_pdu_t *pdu, const struct get_request_t *request);
 
 #endif /* OPENSPODES_COSEM_H */

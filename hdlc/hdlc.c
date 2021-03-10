@@ -215,8 +215,10 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 	}
 
 	ret = dlms_input(ctx->dlms, frame->info, frame->info_len, frame->format.S);
-	if (ret < 0)
-		return HDLC_ABORT_RECEIVE;
+	if (ret < 0) {
+		printf("dlms handling error\n");
+		return HDLC_OK;
+	}
 
 	ctx->nr = (frame->control.ns + 1) & 0x7;
 
