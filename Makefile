@@ -6,9 +6,11 @@ OBJS += hdlc/bytestream.o
 OBJS += hdlc/frame.o
 OBJS += hdlc/hdlc.o
 
-OBJS += dlms/dlms.o
+OBJS += dlms.o
 
 OBJS += cosem/cosem.o
+OBJS += cosem/asn1.o
+OBJS += cosem/pdu.o
 
 APP := spodes
 

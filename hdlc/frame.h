@@ -82,6 +82,7 @@ extern "C" {
 
 int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs);
 int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int length, struct hdlc_frame_t *frame);
+unsigned int hdlc_frame_max_info_length(struct hdlc_frame_t *frame, unsigned int hdlc_frame_size);
 
 void hdlc_frame_print(struct hdlc_frame_t *frame);
 

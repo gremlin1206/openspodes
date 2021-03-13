@@ -30,6 +30,8 @@ SOFTWARE.
 
 #include <stdint.h>
 
+#include <cosem/pdu.h>
+
 #include "frame.h"
 #include "bytestream.h"
 
@@ -67,6 +69,10 @@ struct hdlc_ctx_t
 
 	uint8_t nr;
 	uint8_t ns;
+
+	struct cosem_pdu_t pdu;
+	unsigned int pdu_output_offset;
+	unsigned int last_sent_length;
 
 	struct dlms_ctx_t *dlms;
 };

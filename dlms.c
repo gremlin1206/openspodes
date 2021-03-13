@@ -22,37 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_HDLC_BYTESTREAM_H
-#define OPENSPODES_HDLC_BYTESTREAM_H
+#include <stdio.h>
+#include <string.h>
 
-#include <stdint.h>
+#include "dlms.h"
 
-struct hdlc_frame_t;
-
-struct hdlc_bs_t
+int dlms_init(struct dlms_ctx_t *ctx)
 {
-	void *frame;
-	int frame_index;
-	int length;
-	uint32_t max_length;
+	int ret;
 
-	int started;
-	int ended;
-	int expected_length;
-};
+	ret = cosem_init(&ctx->cosem);
+	if (ret < 0)
+		return ret;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void hdlc_bs_init(struct hdlc_bs_t *bs, void *buffer, uint32_t max_length);
-void hdlc_bs_reset(struct hdlc_bs_t *bs);
-
-int hdlc_bs_put_frame(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame);
-int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length);
-
-#ifdef __cplusplus
+	return 0;
 }
-#endif
 
-#endif /* OPENSPODES_HDLC_BYTESTREAM_H */
+int dlms_input(struct dlms_ctx_t *ctx, struct cosem_pdu_t *pdu)
+{
+	return cosem_input(&ctx->cosem, pdu);
+}

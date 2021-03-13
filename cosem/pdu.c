@@ -22,37 +22,54 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_HDLC_BYTESTREAM_H
-#define OPENSPODES_HDLC_BYTESTREAM_H
+#include <string.h>
 
-#include <stdint.h>
+#include "pdu.h"
 
-struct hdlc_frame_t;
-
-struct hdlc_bs_t
+void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int header)
 {
-	void *frame;
-	int frame_index;
-	int length;
-	uint32_t max_length;
-
-	int started;
-	int ended;
-	int expected_length;
-};
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void hdlc_bs_init(struct hdlc_bs_t *bs, void *buffer, uint32_t max_length);
-void hdlc_bs_reset(struct hdlc_bs_t *bs);
-
-int hdlc_bs_put_frame(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame);
-int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length);
-
-#ifdef __cplusplus
+	memset(pdu, 0, sizeof(*pdu));
+	pdu->header = header;
 }
-#endif
 
-#endif /* OPENSPODES_HDLC_BYTESTREAM_H */
+void cosem_pdu_reset(struct cosem_pdu_t *pdu)
+{
+	pdu->length = 0;
+}
+
+int cosem_pdu_append_buffer(struct cosem_pdu_t *pdu, const void *buffer, unsigned int length)
+{
+	unsigned int pdu_length = pdu->length;
+	unsigned int new_pdu_length = pdu_length + length;
+
+	if (new_pdu_length > sizeof(pdu->data))
+		return -1;
+
+	memcpy(pdu->data + pdu_length, buffer, length);
+	pdu->length = new_pdu_length;
+
+	return (int)new_pdu_length;
+}
+
+unsigned char* cosem_pdu_header(struct cosem_pdu_t *pdu)
+{
+	return pdu->data;
+}
+
+unsigned char* cosem_pdu_payload(struct cosem_pdu_t *pdu)
+{
+	return pdu->data + pdu->header;
+}
+
+unsigned int cosem_pdu_payload_length(struct cosem_pdu_t *pdu)
+{
+	unsigned int length = pdu->length;
+	unsigned int header = pdu->header;
+
+	return (length > header) ? length - header : 0;
+}
+
+void cosem_pdu_set_payload_length(struct cosem_pdu_t *pdu, unsigned int length)
+{
+	pdu->length = length + pdu->header;
+}

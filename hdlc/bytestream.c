@@ -29,6 +29,12 @@ SOFTWARE.
 #include "fcs16.h"
 #include "frame.h"
 
+#ifdef DLMS_HDLC_DEBUG
+#  define PRINTF printf
+#else
+#  define PRINTF(...)
+#endif
+
 #define HDLC_FLAG_SEQUENCE  0x7E
 
 static int hdlc_bs_insert(struct hdlc_bs_t *bs, uint8_t b)
@@ -84,7 +90,7 @@ void hdlc_bs_reset(struct hdlc_bs_t *bs)
 	bs->expected_length = 0;
 }
 
-int hdlc_bs_put(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame)
+int hdlc_bs_put_frame(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame)
 {
 	int ret;
 	int hdr_len;
@@ -97,20 +103,20 @@ int hdlc_bs_put(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame)
 
 	ret = hdlc_bs_insert(bs, HDLC_FLAG_SEQUENCE);
 	if (ret < 0) {
-		printf("fail to insert frame start\n");
+		PRINTF("fail to insert frame start\n");
 		return ret;
 	}
 
 	ret = hdlc_frame_encode_hdr(hdr, sizeof(hdr), frame);
 	if (ret < 0) {
-		printf("fail to encode frame header\n");
+		PRINTF("fail to encode frame header\n");
 		return ret;
 	}
 
 	fcs = FCS16_INIT_VALUE;
 
 	hdr_len = ret;
-	printf("header length: %i\n", hdr_len);
+	PRINTF("header length: %i\n", hdr_len);
 	for (i = 0; i < hdr_len; i++) {
 		unsigned char b = hdr[i];
 		fcs = fcs16(fcs, b);
@@ -156,7 +162,11 @@ int hdlc_bs_put(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame)
 	if (ret < 0)
 		return ret;
 
-	return hdlc_bs_insert(bs, HDLC_FLAG_SEQUENCE);
+	ret = hdlc_bs_insert(bs, HDLC_FLAG_SEQUENCE);
+	if (ret < 0)
+		return ret;
+
+	return (int)frame->info_len;
 }
 
 int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length)
@@ -182,7 +192,7 @@ int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length)
 					continue;
 				}
 
-				printf("START FRAME @ %u\n", i);
+				PRINTF("START FRAME @ %u\n", i);
 				bs->started = 1;
 			}
 		}
@@ -192,7 +202,7 @@ int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length)
 			{
 				if (bs->frame_index <= 2)
 				{
-					printf("END FRAME @ %u\n", i);
+					PRINTF("END FRAME @ %u\n", i);
 					bs->ended = 1;
 					break;
 				}
@@ -202,7 +212,7 @@ int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length)
 					bs->expected_length = ((dest[0] & 0x7) << 8) |  dest[1];
 				}
 
-				printf("expected_length: %u bs->frame_index: %u\n", bs->expected_length, bs->frame_index);
+				PRINTF("expected_length: %u bs->frame_index: %u\n", bs->expected_length, bs->frame_index);
 				if (bs->frame_index >= bs->expected_length)
 				{
 					bs->ended = 1;
@@ -232,19 +242,19 @@ int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length)
 		bytes_received = i;
 		dest_len = bs->frame_index;
 
-		printf("dest_len: %u bytes_received: %i\n", dest_len, bytes_received);
+		PRINTF("dest_len: %u bytes_received: %i\n", dest_len, bytes_received);
 		for (i = 0; i < dest_len; i++)
 		{
-			printf("%02X ", ((uint8_t*)dest)[i]);
+			PRINTF("%02X ", ((uint8_t*)dest)[i]);
 		}
-		printf("\n");
+		PRINTF("\n");
 
-		printf("reset bytestream\n");
+		PRINTF("reset bytestream\n");
 		hdlc_bs_reset(bs);
 	}
 
 	bs->length = dest_len;
-	printf("bs->length: %u\n", bs->length);
+	PRINTF("bs->length: %u\n", bs->length);
 
 	return bytes_received;
 }

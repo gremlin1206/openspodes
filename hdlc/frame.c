@@ -30,6 +30,14 @@ SOFTWARE.
 #include "hdlc.h"
 #include "fcs16.h"
 
+#define DLMS_HDLC_DEBUG 1
+
+#ifdef DLMS_HDLC_DEBUG
+#  define PRINTF printf
+#else
+#  define PRINTF(...)
+#endif
+
 static int hdlc_put_format_type(unsigned char *p, struct hdlc_format_t value, unsigned int length)
 {
 	p[0] = ((length >> 8) & 0x7) | (value.type << 4) | (value.S << 3);
@@ -207,7 +215,7 @@ static int hdlc_check_hcs_fcs(unsigned char* p, unsigned int size, int hcs_index
 
 		if (fcs != FCS16_GOOD_VALUE)
 		{
-			printf("BAD HCS\n");
+			PRINTF("BAD HCS\n");
 			return -2;
 		}
 	}
@@ -219,7 +227,7 @@ static int hdlc_check_hcs_fcs(unsigned char* p, unsigned int size, int hcs_index
 
 	if (fcs != FCS16_GOOD_VALUE)
 	{
-		printf("BAD FCS\n");
+		PRINTF("BAD FCS\n");
 		return -1;
 	}
 
@@ -299,7 +307,7 @@ static int hdlc_get_control_type(struct hdlc_control_t *value, unsigned char* p,
 
   if (value->code == 0)
   {
-    printf("unrecognized frame code\n");
+	  PRINTF("unrecognized frame code\n");
     value->code = HDLC_FRAME_UNKNOWN;
   }
 
@@ -308,26 +316,26 @@ static int hdlc_get_control_type(struct hdlc_control_t *value, unsigned char* p,
 
 void hdlc_frame_print(struct hdlc_frame_t *frame)
 {
-	printf("frame: [%p]\n", frame);
-	printf("\ttype: %u\n", frame->format.type);
-	printf("\tS: %u\n", frame->format.S);
-	//printf("\tlength: %u\n", frame->format.length);
-	printf("\tdest: %u.%u\n", frame->dest_address.upper, frame->dest_address.lower);
-	printf("\tsrc: %u.%u\n", frame->src_address.upper, frame->src_address.lower);
-	printf("\tctrl.code: %u\n", frame->control.code);
-	printf("\tN(R): %u\n", frame->control.nr);
-	printf("\tN(S): %u\n", frame->control.ns);
-	printf("\tP/F: %u\n", frame->control.pf);
+	PRINTF("frame: [%p]\n", frame);
+	PRINTF("\ttype: %u\n", frame->format.type);
+	PRINTF("\tS: %u\n", frame->format.S);
+	//PRINTF("\tlength: %u\n", frame->format.length);
+	PRINTF("\tdest: %u.%u\n", frame->dest_address.upper, frame->dest_address.lower);
+	PRINTF("\tsrc: %u.%u\n", frame->src_address.upper, frame->src_address.lower);
+	PRINTF("\tctrl.code: %u\n", frame->control.code);
+	PRINTF("\tN(R): %u\n", frame->control.nr);
+	PRINTF("\tN(S): %u\n", frame->control.ns);
+	PRINTF("\tP/F: %u\n", frame->control.pf);
 
-	printf("\tinfo_len: %u\n", frame->info_len);
+	PRINTF("\tinfo_len: %u\n", frame->info_len);
 	if (frame->info_len > 0)
 	{
 		unsigned int i;
 		for (i = 0; i < frame->info_len; i++)
 		{
-			printf("%02X ", frame->info[i]);
+			PRINTF("%02X ", frame->info[i]);
 		}
-		printf("\n");
+		PRINTF("\n");
 	}
 }
 
@@ -348,12 +356,12 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 	//uint16_t hcs = FCS16_INIT_VALUE;
 	int hcs_index = 0;
 
-	//printf("hdlc_frame_parse length: %u\n", length);
+	//PRINTF("hdlc_frame_parse length: %u\n", length);
 
 	ret = hdlc_get_frame_length(p, s);
 	if (ret < 0)
 	{
-		printf("fail to get frame length\n");
+		PRINTF("fail to get frame length\n");
 		return ret;
 	}
 
@@ -361,14 +369,14 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 
 	if (length != frame->length)
 	{
-		printf("invalid length\n");
-		printf("expected frame length: %u input length: %u\n", frame->length, length);
+		PRINTF("invalid length\n");
+		PRINTF("expected frame length: %u input length: %u\n", frame->length, length);
 		unsigned int i;
 		for (i = 0; i < length; i++)
 		{
-			printf("%02X ", frm[i]);
+			PRINTF("%02X ", frm[i]);
 		}
-		printf("\n");
+		PRINTF("\n");
 
 		return -1;
 	}
@@ -376,13 +384,13 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 	ret = hdlc_get_format_type(&frame->format, p, s);
 	if (ret < 0)
 	{
-		printf("bad format type\n");
+		PRINTF("bad format type\n");
 		return ret;
 	}
 
 	if (frame->format.type != HDLC_TYPE_3)
 	{
-		printf("invalid format type value: %u\n", frame->format.type);
+		PRINTF("invalid format type value: %u\n", frame->format.type);
 		return -1;
 	}
 
@@ -392,7 +400,7 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 	ret = hdlc_get_address_type(&frame->dest_address, p, s);
 	if (ret < 0)
 	{
-		printf("bad dest address\n");
+		PRINTF("bad dest address\n");
 		return ret;
 	}
 
@@ -402,7 +410,7 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 	ret = hdlc_get_address_type(&frame->src_address, p, s);
 	if (ret < 0)
 	{
-		printf("bad src address\n");
+		PRINTF("bad src address\n");
 		return ret;
 	}
 
@@ -412,7 +420,7 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 	ret = hdlc_get_control_type(&frame->control, p, s);
 	if (ret < 0)
 	{
-		printf("bad control field\n");
+		PRINTF("bad control field\n");
 		return ret;
 	}
 
@@ -441,7 +449,7 @@ int hdlc_frame_parse(struct hdlc_frame_t *frame, struct hdlc_bs_t *bs)
 	ret = hdlc_check_hcs_fcs(frm, length, hcs_index);
 	if (ret < 0)
 	{
-		printf("FCS HCS check failed\n");
+		PRINTF("FCS HCS check failed\n");
 		return ret;
 	}
 
@@ -470,7 +478,7 @@ int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int hdr_len, struct hdlc_
 	ret = hdlc_put_address_type(p, frame->dest_address);
 	if (ret < 0)
 	{
-		printf("Fail to put dest address\n");
+		PRINTF("Fail to put dest address\n");
 		return ret;
 	}
 	length += ret;
@@ -483,7 +491,7 @@ int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int hdr_len, struct hdlc_
 	ret = hdlc_put_address_type(p, frame->src_address);
 	if (ret < 0)
 	{
-		printf("Fail to put src address\n");
+		PRINTF("Fail to put src address\n");
 		return ret;
 	}
 	length += ret;
@@ -509,4 +517,15 @@ int hdlc_frame_encode_hdr(unsigned char *hdr, unsigned int hdr_len, struct hdlc_
 		return ret;
 
 	return (int)length;
+}
+
+unsigned int hdlc_frame_max_info_length(struct hdlc_frame_t *frame, unsigned int hdlc_frame_size)
+{
+	unsigned int overhead = 0;
+
+	overhead += 1 /*Flag*/ + 2 /*Frame format*/ + 1 /*Control*/ + 2 /*HCS*/ + 2 /*FCS*/ + 1 /*Flag*/;
+	overhead += frame->dest_address.len;
+	overhead += frame->src_address.len;
+
+	return hdlc_frame_size - overhead;
 }

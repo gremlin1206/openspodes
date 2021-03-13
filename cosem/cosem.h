@@ -25,12 +25,8 @@ SOFTWARE.
 #ifndef OPENSPODES_COSEM_H
 #define OPENSPODES_COSEM_H
 
-#define LLC_REMOTE_LSAP         0xE6
-#define LLC_LOCAL_LSAP_REQUEST  0xE6
-#define LLC_LOCAL_LSAP_RESPONSE 0xE7
-#define LLC_HEADER_LENGTH       3
-
-struct dlms_pdu_t;
+//#include "association.h"
+#include "pdu.h"
 
 enum apdu_tag_t
 {
@@ -269,12 +265,20 @@ struct get_request_t
 	};
 };
 
-struct cosem_ctx_t
+struct get_response_t
 {
-	int associated;
+
 };
 
-int cosem_process_aa_request(struct cosem_ctx_t *ctx, struct aarq_t *aarq, struct aare_t *aare);
-int cosem_process_get_request(struct cosem_ctx_t *ctx, struct dlms_pdu_t *pdu, const struct get_request_t *request);
+struct cosem_ctx_t
+{
+	unsigned int export_offset;
+	unsigned int export_length;
+	//struct cosem_association_t association;
+};
+
+int cosem_input(struct cosem_ctx_t *ctx, struct cosem_pdu_t *pdu);
+
+int cosem_init(struct cosem_ctx_t *ctx);
 
 #endif /* OPENSPODES_COSEM_H */

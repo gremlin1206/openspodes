@@ -4,9 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <hdlc/hdlc.h>
-#include <dlms/dlms.h>
-#include <cosem/cosem.h>
+#include "dlms.h"
 
 int fd;
 
@@ -64,7 +62,6 @@ int main(void)
 {
 	struct hdlc_ctx_t hdlc;
 	struct dlms_ctx_t dlms;
-	struct cosem_ctx_t cosem;
 	int ret;
 
 #if 0
@@ -102,7 +99,6 @@ int main(void)
 #endif
 
 	dlms_init(&dlms);
-	dlms.cosem = &cosem;
 
 	hdlc_init(&hdlc);
 	hdlc.dlms = &dlms;

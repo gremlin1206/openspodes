@@ -22,37 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_HDLC_BYTESTREAM_H
-#define OPENSPODES_HDLC_BYTESTREAM_H
+#ifndef COSEM_ASN1_H_
+#define COSEM_ASN1_H_
 
-#include <stdint.h>
+int asn_get_length(unsigned int *out, const unsigned char **buffer, unsigned int *len);
+int asn_get_uint16(unsigned short *out, const unsigned char **buffer, unsigned int *length);
+int asn_put_uint16(unsigned char *buffer, unsigned short value);
+int asn_get_uint8(unsigned char *out, const unsigned char **buffer, unsigned int *length);
+int asn_get_buffer(void *out, unsigned int bytes, const unsigned char **buffer, unsigned int *length);
 
-struct hdlc_frame_t;
-
-struct hdlc_bs_t
-{
-	void *frame;
-	int frame_index;
-	int length;
-	uint32_t max_length;
-
-	int started;
-	int ended;
-	int expected_length;
-};
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void hdlc_bs_init(struct hdlc_bs_t *bs, void *buffer, uint32_t max_length);
-void hdlc_bs_reset(struct hdlc_bs_t *bs);
-
-int hdlc_bs_put_frame(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame);
-int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* OPENSPODES_HDLC_BYTESTREAM_H */
+#endif /* COSEM_ASN1_H_ */

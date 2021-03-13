@@ -25,24 +25,16 @@ SOFTWARE.
 #ifndef OPENSPODES_DLMS_H
 #define OPENSPODES_DLMS_H
 
-#define DLMS_MAX_PDU_SIZE 1024
-
-struct cosem_ctx_t;
-
-struct dlms_pdu_t
-{
-	unsigned char data[DLMS_MAX_PDU_SIZE];
-	unsigned int length;
-};
+#include <cosem/cosem.h>
+#include <hdlc/hdlc.h>
 
 struct dlms_ctx_t
 {
-	struct dlms_pdu_t pdu;
-	struct cosem_ctx_t *cosem;
+	struct cosem_ctx_t cosem;
 };
 
 int dlms_init(struct dlms_ctx_t *ctx);
-int dlms_input(struct dlms_ctx_t *ctx, unsigned char *p, unsigned int len, int more);
-void dlms_drop_pdu(struct dlms_ctx_t *ctx);
+
+int dlms_input(struct dlms_ctx_t *ctx, struct cosem_pdu_t *pdu);
 
 #endif /* OPENSPODES_DLMS_H */

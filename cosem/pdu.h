@@ -22,37 +22,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_HDLC_BYTESTREAM_H
-#define OPENSPODES_HDLC_BYTESTREAM_H
+#ifndef COSEM_PDU_H_
+#define COSEM_PDU_H_
 
-#include <stdint.h>
+#ifdef  CONFIG_DLMS_MAX_PDU_SIZE
+#  define DLMS_MAX_PDU_SIZE CONFIG_DLMS_MAX_PDU_SIZE
+#else
+#  define DLMS_MAX_PDU_SIZE 1024
+#endif
 
-struct hdlc_frame_t;
+#ifdef  CONFIG_DLMS_MAX_PDU_HEADER_SIZE
+#  define DLMS_MAX_PDU_HEADER_SIZE CONFIG_DLMS_MAX_PDU_HEADER_SIZE
+#else
+#  define DLMS_MAX_PDU_HEADER_SIZE 16
+#endif
 
-struct hdlc_bs_t
+struct cosem_pdu_t
 {
-	void *frame;
-	int frame_index;
-	int length;
-	uint32_t max_length;
-
-	int started;
-	int ended;
-	int expected_length;
+	unsigned char data[DLMS_MAX_PDU_HEADER_SIZE + DLMS_MAX_PDU_SIZE];
+	unsigned int length;
+	unsigned int header;
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int header);
 
-void hdlc_bs_init(struct hdlc_bs_t *bs, void *buffer, uint32_t max_length);
-void hdlc_bs_reset(struct hdlc_bs_t *bs);
+void cosem_pdu_reset(struct cosem_pdu_t *pdu);
+int cosem_pdu_append_buffer(struct cosem_pdu_t *pdu, const void *buffer, unsigned int length);
 
-int hdlc_bs_put_frame(struct hdlc_bs_t *bs, struct hdlc_frame_t *frame);
-int hdlc_bs_receive(struct hdlc_bs_t *bs, uint8_t *bytes, uint32_t length);
+unsigned char* cosem_pdu_header(struct cosem_pdu_t *pdu);
+unsigned char* cosem_pdu_payload(struct cosem_pdu_t *pdu);
+unsigned int cosem_pdu_payload_length(struct cosem_pdu_t *pdu);
+void cosem_pdu_set_payload_length(struct cosem_pdu_t *pdu, unsigned int length);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* OPENSPODES_HDLC_BYTESTREAM_H */
+#endif /* COSEM_PDU_H_ */
