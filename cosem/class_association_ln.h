@@ -22,20 +22,42 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#ifndef COSEM_CLASS_ASSOCIATION_LN_H_
+#define COSEM_CLASS_ASSOCIATION_LN_H_
 
-#include "types.h"
-#include "pdu.h"
-#include "association.h"
+/*
+ * Class ID 15
+ */
 
-struct cosem_ctx_t
+enum class_association_ln_attribute_t
 {
-	struct cosem_association_t association;
+	association_ln_zero_attribute,
+
+	association_ln_logical_name,
+	association_ln_object_list,
+	association_ln_associated_partners_id,
+	association_ln_application_context_name,
+	association_ln_dlms_context_info,
+	association_ln_authentication_mechanism_name,
+	association_ln_secret,
+	association_ln_association_status,
+	association_ln_secret_security_setup_reference,
+	association_ln_user_list,
+	association_ln_current_user,
 };
 
-int cosem_input(struct cosem_ctx_t *ctx, struct cosem_pdu_t *pdu);
+enum class_association_ln_method_t
+{
+	association_ln_zero_method,
 
-int cosem_init(struct cosem_ctx_t *ctx);
+	association_ln_reply_to_hls_authentication,
+	association_ln_change_hls_secret,
+	association_ln_add_object,
+	association_ln_remove_object,
+	association_ln_add_user,
+	association_ln_remove_user,
+};
 
-#endif /* OPENSPODES_COSEM_H */
+extern const struct cosem_class_t class_association_ln;
+
+#endif /* COSEM_CLASS_ASSOCIATION_LN_H_ */

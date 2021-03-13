@@ -11,6 +11,7 @@ OBJS += dlms.o
 OBJS += cosem/cosem.o
 OBJS += cosem/asn1.o
 OBJS += cosem/pdu.o
+OBJS += cosem/association.o
 
 APP := spodes
 

@@ -22,20 +22,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#include "objects.h"
 
-#include "types.h"
-#include "pdu.h"
-#include "association.h"
-
-struct cosem_ctx_t
+static struct cosem_object_t *cosem_find_abstract_object(struct cosem_longname_t name)
 {
-	struct cosem_association_t association;
-};
+	switch (name.C)
+	{
+	case 40: // Instances of IC “Association SN/LN”
+		return cosem_association_get_object(name);
 
-int cosem_input(struct cosem_ctx_t *ctx, struct cosem_pdu_t *pdu);
+	default:
+		return 0;
+	}
+}
 
-int cosem_init(struct cosem_ctx_t *ctx);
+struct cosem_object_t *cosem_find_object_by_name(struct cosem_longname_t name)
+{
+	if (name.A == 0)
+		return cosem_find_abstract_object(name);
+	else
+		return 0; //return cosem_find_energy_object(name);
+}
 
-#endif /* OPENSPODES_COSEM_H */
+int cosem_object_get_attribute(struct cosem_object_t* object, struct cosem_pdu_t *pdu)
+{
+	return cosem_class_get_attribute(object->cosem_class, object->data, pdu);
+}

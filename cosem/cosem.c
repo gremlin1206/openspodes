@@ -28,17 +28,6 @@ SOFTWARE.
 #include "asn1.h"
 #include "cosem.h"
 
-#if 0
-static void cosem_append_llc_response(struct cosem_pdu_t *pdu)
-{
-	unsigned char *p = &pdu->data[pdu->length];
-
-	pdu->length += 3;
-	p[0] = LLC_REMOTE_LSAP;
-	p[1] = LLC_LOCAL_LSAP_RESPONSE;
-	p[3] = 0;
-}
-
 static void cosem_append_error(struct cosem_pdu_t *pdu, enum cosem_error_service_t service, enum cosem_error_t error)
 {
 	unsigned char *p = &pdu->data[pdu->length];
@@ -57,17 +46,16 @@ static void cosem_append_exception(struct cosem_pdu_t *pdu)
 	pdu->length += 4;
 	p[0] = apdu_tag_exception_response;
 }
-#endif
 
 static const unsigned char application_context_name_preamble[] = {
-	0x09, 0x06, 0x07, 0x60, 0x85, 0x74
+	0x09, 0x06, 0x07, 0x60, 0x85, 0x74, 0x05, 0x08, 0x01
 };
 
 static const unsigned char mechanism_name_preamble[] = {
-	0x07, 0x60, 0x85, 0x74
+	0x07, 0x60, 0x85, 0x74, 0x05, 0x08, 0x02
 };
 
-static int cosem_decode_application_context_name(struct application_context_name_t *out, const unsigned char **buffer, unsigned int *length)
+static int cosem_decode_application_context_name(enum application_context_name_t *out, const unsigned char **buffer, unsigned int *length)
 {
 	const unsigned char *p = *buffer;
 	unsigned int len = *length;
@@ -80,15 +68,15 @@ static int cosem_decode_application_context_name(struct application_context_name
 	if (memcmp(p, application_context_name_preamble, sizeof(application_context_name_preamble)) != 0)
 		return -1;
 
-	memcpy(out, p + sizeof(application_context_name_preamble), 4);
+	*out = p[sizeof(application_context_name_preamble)];
 
-	*buffer += 10;
-	*length -= 10;
+	*buffer += sizeof(application_context_name_preamble) + 1;
+	*length -= sizeof(application_context_name_preamble) + 1;
 
 	return 0;
 }
 
-static int cosem_encode_application_context_name(unsigned char *buffer, const struct application_context_name_t *name)
+static int cosem_encode_application_context_name(unsigned char *buffer, enum application_context_name_t name)
 {
 	unsigned char *p = buffer;
 
@@ -97,11 +85,9 @@ static int cosem_encode_application_context_name(unsigned char *buffer, const st
 	p[0] = 0xA1; p++;
 
 	memcpy(p, application_context_name_preamble, sizeof(application_context_name_preamble));
-	p += sizeof(application_context_name_preamble);
+	p[sizeof(application_context_name_preamble)] = name;
 
-	memcpy(p, name, sizeof(*name));
-
-	return 1 + sizeof(application_context_name_preamble) + sizeof(*name);
+	return 1 + sizeof(application_context_name_preamble) + 1;
 }
 
 static int cosem_encode_association_result(unsigned char *buffer, enum association_result_t result)
@@ -179,22 +165,22 @@ static int cosem_decode_acse_requirements(struct acse_requirements_t *out, const
 	return 0;
 }
 
-static int cosem_decode_mechanism_name(struct mechanism_name_t *out, const unsigned char **buffer, unsigned int *length)
+static int cosem_decode_mechanism_name(enum mechanism_name_t *out, const unsigned char **buffer, unsigned int *length)
 {
 	const unsigned char *p = *buffer;
 
 	printf("dlms_decode_mechanism_name\n");
 
-	if (*length < 8)
+	if (*length < (sizeof(mechanism_name_preamble) + 1))
 		return -1;
 
 	if (memcmp(p, mechanism_name_preamble, sizeof(mechanism_name_preamble)) != 0)
 		return -1;
 
-	memcpy(out, p + sizeof(mechanism_name_preamble), 4);
+	*out = p[sizeof(mechanism_name_preamble)];
 
-	*buffer += 8;
-	*length -= 8;
+	*buffer += sizeof(mechanism_name_preamble) + 1;
+	*length -= sizeof(mechanism_name_preamble) + 1;
 
 	return 0;
 }
@@ -412,7 +398,7 @@ static int cosem_encode_aa_response(unsigned char *buffer, const struct aare_t *
 
 	p += 2;
 
-	ret = cosem_encode_application_context_name(p, &aare->application_context_name);
+	ret = cosem_encode_application_context_name(p, aare->application_context_name);
 	if (ret < 0)
 		return ret;
 
@@ -496,43 +482,23 @@ static int cosem_encode_get_response(unsigned char *buffer, struct get_response_
 
 static int cosem_process_aa_request(struct cosem_ctx_t *ctx, struct aarq_t *aarq, struct aare_t *aare)
 {
-/*
-	aare.application_context_name.value = 0x01010805;
-	aare.association_result = association_result_accepted;
-	aare.acse_service_user = 0;
-	aare.acse_service_provider = -1;
-	aare.initiate_response.negotiated_dlms_version_number = 6;
-	aare.initiate_response.negotiated_conformance.selective_access = 1;
-	aare.initiate_response.negotiated_conformance.set = 1;
-	aare.initiate_response.negotiated_conformance.get = 1;
-	aare.initiate_response.negotiated_conformance.block_transfer_with_get_or_read = 1;
-	aare.initiate_response.server_max_receive_pdu_size = 0x400;
-	aare.initiate_response.vaa_name = 7;
- */
-
-	aare->application_context_name = aarq->application_context_name;
-
-	aare->association_result = association_result_accepted;
-
-	aare->acse_service_user = 0;
-	aare->acse_service_provider = -1;
-
-	aare->initiate_response.negotiated_dlms_version_number = 6;
-
-	aare->initiate_response.negotiated_conformance.selective_access = 1;
-	aare->initiate_response.negotiated_conformance.set = 1;
-	aare->initiate_response.negotiated_conformance.get = 1;
-	aare->initiate_response.negotiated_conformance.block_transfer_with_get_or_read = 1;
-
-	aare->initiate_response.server_max_receive_pdu_size = 0x400;
-
-	aare->initiate_response.vaa_name = 7;
-
-	return 0;
+	return cosem_association_open(ctx, &ctx->association, aarq, aare);
 }
 
 static int cosem_process_get_request(struct cosem_ctx_t *ctx, const struct get_request_t *request, struct get_response_t *response)
 {
+	const struct cosem_object_t* object;
+
+	if (!ctx->association.associated)
+		return -1;
+
+	object = cosem_find_object_by_name(request->cosem_attribute_descriptor.instance_id);
+	if (!object) {
+		return COSEM_EXCEPTION(cosem_error_access_object_unavailable);
+	}
+
+
+
 	return -1;
 }
 

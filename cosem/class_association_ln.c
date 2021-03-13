@@ -22,20 +22,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#include "class_association_ln.h"
 
-#include "types.h"
-#include "pdu.h"
-#include "association.h"
-
-struct cosem_ctx_t
+static int encode_association_ln_logical_name(struct cosem_attribute_descriptor_t *attribute, struct cosem_pdu_t *pdu)
 {
-	struct cosem_association_t association;
+	unsigned char payload[] = {
+		0x09, 0x06,
+		0, 0, 40, 0, 0, 255
+	};
+
+	cosem_pdu_append_buffer(pdu, payload, sizeof(payload));
+
+	return 0;
+}
+
+static int get_attribute(struct cosem_class_t *cosem_class, void *data, struct cosem_attribute_descriptor_t *attribute, struct cosem_pdu_t *pdu)
+{
+	switch (attribute->attribute_id)
+	{
+	case association_ln_logical_name:
+		return encode_association_ln_logical_name(attribute, pdu);
+	}
+
+	return COSEM_EXCEPTION();
+}
+
+const struct cosem_class_t class_association_ln = {
+	.id = 15,
+	.get = get_attribute,
 };
-
-int cosem_input(struct cosem_ctx_t *ctx, struct cosem_pdu_t *pdu);
-
-int cosem_init(struct cosem_ctx_t *ctx);
-
-#endif /* OPENSPODES_COSEM_H */

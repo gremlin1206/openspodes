@@ -22,20 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#ifndef COSEM_ASSOCIATION_H_
+#define COSEM_ASSOCIATION_H_
 
 #include "types.h"
-#include "pdu.h"
-#include "association.h"
 
-struct cosem_ctx_t
+struct cosem_ctx_t;
+
+struct cosem_association_t
 {
-	struct cosem_association_t association;
+	int associated;
+	enum mechanism_name_t mechanism_name;
+	struct calling_authentication_t calling_authentication;
+	struct conformance_t negotiated_conformance;
 };
 
-int cosem_input(struct cosem_ctx_t *ctx, struct cosem_pdu_t *pdu);
+int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *a, struct aarq_t *aarq, struct aare_t *aare);
 
-int cosem_init(struct cosem_ctx_t *ctx);
+struct cosem_object_t *cosem_association_get_object(struct cosem_longname_t name);
 
-#endif /* OPENSPODES_COSEM_H */
+#endif /* COSEM_ASSOCIATION_H_ */

@@ -22,20 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#include "class.h"
 
-#include "types.h"
-#include "pdu.h"
-#include "association.h"
-
-struct cosem_ctx_t
+int cosem_class_get_attribute(struct cosem_class_t *cosem_class, void *data, struct cosem_pdu_t *pdu)
 {
-	struct cosem_association_t association;
-};
+	if (!cosem_class->get)
+		return COSEM_EXCEPTION(cosem_error_access_other);
 
-int cosem_input(struct cosem_ctx_t *ctx, struct cosem_pdu_t *pdu);
-
-int cosem_init(struct cosem_ctx_t *ctx);
-
-#endif /* OPENSPODES_COSEM_H */
+	return cosem_class->get(cosem_class, data, pdu);;
+}
