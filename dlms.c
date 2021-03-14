@@ -38,6 +38,11 @@ int dlms_init(struct dlms_ctx_t *ctx)
 	return 0;
 }
 
+void dlms_close_association(struct dlms_ctx_t *ctx)
+{
+	cosem_close_association(&ctx->cosem);
+}
+
 int dlms_input(struct dlms_ctx_t *ctx, struct cosem_pdu_t *pdu)
 {
 	return cosem_input(&ctx->cosem, pdu);

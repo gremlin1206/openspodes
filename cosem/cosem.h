@@ -35,6 +35,7 @@ struct cosem_ctx_t
 };
 
 int cosem_input(struct cosem_ctx_t *ctx, struct cosem_pdu_t *pdu);
+void cosem_close_association(struct cosem_ctx_t *ctx);
 
 int cosem_init(struct cosem_ctx_t *ctx);
 

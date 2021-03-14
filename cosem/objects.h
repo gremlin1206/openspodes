@@ -25,14 +25,49 @@ SOFTWARE.
 #ifndef COSEM_OBJECTS_H_
 #define COSEM_OBJECTS_H_
 
+#include "types.h"
+
+struct cosem_object_t;
+struct cosem_ctx_t;
+struct get_request_t;
+struct get_response_t;
+
+typedef int (*cosem_get_attribute_t)(struct get_request_t *request, struct get_response_t *response);
+//typedef int cosem_set_attribute(int attribute);
+//typedef int cosem_call_method(int method);
+
+struct cosem_class_t
+{
+	int id;
+	cosem_get_attribute_t get;
+};
+
 struct cosem_object_t
 {
 	const struct cosem_class_t *cosem_class;
-	void *data;
+};
+
+struct get_request_t
+{
+	enum get_request_type_t type;
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	union {
+		struct get_request_normal_t get_request_normal;
+	};
+
+	struct cosem_ctx_t *ctx;
+	struct cosem_object_t *object;
+};
+
+struct get_response_t
+{
+	enum data_access_result_t data_access_result;
+	unsigned char *buffer;
+	unsigned int length;
 };
 
 struct cosem_object_t *cosem_find_object_by_name(struct cosem_longname_t name);
 
-int cosem_object_get_attribute(struct cosem_object_t* object, struct cosem_pdu_t *pdu);
+int cosem_object_get_attribute(struct get_request_t *request, struct get_response_t *response);
 
 #endif /* COSEM_OBJECTS_H_ */

@@ -30,7 +30,7 @@ SOFTWARE.
 #include "hdlc.h"
 #include "fcs16.h"
 
-#define DLMS_HDLC_DEBUG 1
+//#define DLMS_HDLC_DEBUG 1
 
 #ifdef DLMS_HDLC_DEBUG
 #  define PRINTF printf
@@ -78,7 +78,7 @@ static int hdlc_put_control_type(unsigned char *p, struct hdlc_control_t value)
 	switch (value.code)
 	{
 	case HDLC_FRAME_I:
-		b = (value.nr << 5) | (value.pf << 4) | (value.ns);
+		b = (value.nr << 5) | (value.pf << 4) | (value.ns << 1);
 		break;
 
 	case HDLC_FRAME_RR:

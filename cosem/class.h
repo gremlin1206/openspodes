@@ -27,16 +27,5 @@ SOFTWARE.
 
 #include "types.h"
 
-typedef int (*cosem_get_attribute_t)(struct cosem_class_t *cosem_class, void *data, struct cosem_pdu_t *pdu);
-//typedef int cosem_set_attribute(int attribute);
-//typedef int cosem_call_method(int method);
-
-struct cosem_class_t
-{
-	int id;
-	cosem_get_attribute_t get;
-};
-
-int cosem_class_get_attribute(struct cosem_class_t *cosem_class, void *data, struct cosem_pdu_t *pdu);
 
 #endif /* COSEM_CLASS_H_ */

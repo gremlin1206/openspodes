@@ -33,7 +33,7 @@ struct cosem_association_t
 {
 	int associated;
 	enum mechanism_name_t mechanism_name;
-	struct calling_authentication_t calling_authentication;
+	struct authentication_value_t calling_authentication;
 	struct conformance_t negotiated_conformance;
 };
 

@@ -33,8 +33,10 @@ struct dlms_ctx_t
 	struct cosem_ctx_t cosem;
 };
 
-int dlms_init(struct dlms_ctx_t *ctx);
-
 int dlms_input(struct dlms_ctx_t *ctx, struct cosem_pdu_t *pdu);
+
+void dlms_close_association(struct dlms_ctx_t *ctx);
+
+int dlms_init(struct dlms_ctx_t *ctx);
 
 #endif /* OPENSPODES_DLMS_H */

@@ -111,11 +111,11 @@ struct invoke_id_and_priority_t
 
 struct cosem_longname_t
 {
-	uint8_t A : 1;
-	uint8_t D : 7;
-	uint8_t C;
-	uint8_t E;
-	uint8_t F;
+	unsigned char A : 1;
+	unsigned char D : 7;
+	unsigned char C;
+	unsigned char E;
+	unsigned char F;
 };
 
 struct cosem_attribute_descriptor_t
@@ -154,7 +154,7 @@ enum mechanism_name_t
 	cosem_high_level_security_ecdsa,
 };
 
-struct calling_authentication_t
+struct authentication_value_t
 {
 	unsigned char key[16];
 	unsigned char length;
@@ -240,7 +240,27 @@ enum acse_service_provider_t
 	no_common_acse_version,
 };
 
-struct get_request_t
+enum data_access_result_t
+{
+	access_result_success                     = 0,
+	access_result_hardware_fault              = 1,
+	access_result_temporary_failure           = 2,
+	access_result_read_write_denied           = 3,
+	access_result_object_undefined            = 4,
+	access_result_object_class_inconsistent   = 9,
+	access_result_object_unavailable          = 11,
+	access_result_type_unmatched              = 12,
+	access_result_scope_of_access_violated    = 13,
+	access_result_data_block_unavailable      = 14,
+	access_result_long_get_aborted            = 15,
+	access_result_no_long_get_in_progress     = 16,
+	access_result_long_set_aborted            = 17,
+	access_result_no_long_set_in_progres      = 18,
+	access_result_data_block_number_invalid   = 19,
+	access_result_other_reason                = 250,
+};
+
+struct get_request_normal_t
 {
 	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
 };
@@ -257,32 +277,25 @@ struct aarq_t
 	enum application_context_name_t   application_context_name;
 	struct acse_requirements_t        acse_requirements;
 	enum mechanism_name_t             mechanism_name;
-	struct calling_authentication_t   calling_authentication;
+	struct authentication_value_t     calling_authentication;
 	struct initiate_request_t         initiate_request;
 };
 
 struct aare_t
 {
-	enum application_context_name_t   application_context_name; // A1
-	enum association_result_t         association_result;       // A2
-	enum acse_service_user_t          acse_service_user;        // A3
-	enum acse_service_provider_t      acse_service_provider;    // A3
-	struct initiate_response_t        initiate_response;        // BE
-};
+	unsigned int has_acse_requirements : 1;
+	unsigned int has_mechanism_name : 1;
+	unsigned int has_responding_authentication_value : 1;
 
-struct get_request_t
-{
-	enum get_request_type_t type;
-	struct invoke_id_and_priority_t invoke_id_and_priority;
-	union {
-		struct get_request_t get_request_normal;
-	};
-};
-
-struct get_response_t
-{
+	enum application_context_name_t   application_context_name;        // A1
+	enum association_result_t         association_result;              // A2
+	enum acse_service_user_t          acse_service_user;               // A3
+	enum acse_service_provider_t      acse_service_provider;           // A3
+	struct acse_requirements_t        acse_requirements;               // 88
+	enum mechanism_name_t             mechanism_name;                  // 89
+	struct authentication_value_t     responding_authentication_value; // AA
+	struct initiate_response_t        initiate_response;               // BE
 
 };
-
 
 #endif /* COSEM_TYPES_H_ */

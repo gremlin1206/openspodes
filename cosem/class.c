@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include "class.h"
 
+#if 0
 int cosem_class_get_attribute(struct cosem_class_t *cosem_class, void *data, struct cosem_pdu_t *pdu)
 {
 	if (!cosem_class->get)
@@ -31,3 +32,4 @@ int cosem_class_get_attribute(struct cosem_class_t *cosem_class, void *data, str
 
 	return cosem_class->get(cosem_class, data, pdu);;
 }
+#endif

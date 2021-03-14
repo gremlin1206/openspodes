@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include "association.h"
 #include "pdu.h"
+#include "class_association_ln.h"
 
 static void cosem_reject_association(struct aarq_t *aarq, struct aare_t *aare, enum acse_service_user_t acse_service_user)
 {
@@ -35,7 +36,7 @@ static void cosem_reject_association(struct aarq_t *aarq, struct aare_t *aare, e
 	aare->acse_service_user = acse_service_user;
 }
 
-static int cosem_validate_lls_password(struct cosem_ctx_t *ctx, struct calling_authentication_t *auth)
+static int cosem_validate_lls_password(struct cosem_ctx_t *ctx, struct authentication_value_t *auth)
 {
 	return 0;
 }
@@ -71,6 +72,9 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 		}
 		break;
 
+	case cosem_high_level_security:
+		break;
+
 	case cosem_high_level_security_gmac:
 		break;
 
@@ -100,8 +104,14 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 	a->calling_authentication = aarq->calling_authentication;
 	a->negotiated_conformance = aare->initiate_response.negotiated_conformance;
 
+	printf("cosem_association_open: associated\n");
+
 	return 0;
 }
+
+static struct cosem_association_ln_object_t cosem_object_current_association = {
+		.base = {. cosem_class = (struct cosem_class_t*)&class_association_ln },
+};
 
 struct cosem_object_t *cosem_association_get_object(struct cosem_longname_t name)
 {
@@ -111,7 +121,7 @@ struct cosem_object_t *cosem_association_get_object(struct cosem_longname_t name
 	switch (name.E)
 	{
 	case 0: // current association
-		break;
+		return (struct cosem_object_t*)&cosem_object_current_association;
 
 	case 1: // guest client access
 		break;
@@ -121,9 +131,6 @@ struct cosem_object_t *cosem_association_get_object(struct cosem_longname_t name
 
 	case 3: // configurator/administrator access
 		break;
-
-	default:
-		return 0;
 	}
 
 	return 0;

@@ -22,29 +22,40 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include <string.h>
+#include <stdio.h>
+
 #include "class_association_ln.h"
 
-static int encode_association_ln_logical_name(struct cosem_attribute_descriptor_t *attribute, struct cosem_pdu_t *pdu)
+static int encode_association_ln_logical_name(struct get_request_t *request, struct get_response_t *response)
 {
 	unsigned char payload[] = {
 		0x09, 0x06,
 		0, 0, 40, 0, 0, 255
 	};
 
-	cosem_pdu_append_buffer(pdu, payload, sizeof(payload));
+	payload[sizeof(payload) - 2] = request->get_request_normal.cosem_attribute_descriptor.instance_id.E;
+
+	memcpy(response->buffer, payload, sizeof(payload));
+	response->length = sizeof(payload);
 
 	return 0;
 }
 
-static int get_attribute(struct cosem_class_t *cosem_class, void *data, struct cosem_attribute_descriptor_t *attribute, struct cosem_pdu_t *pdu)
+static int get_attribute(struct get_request_t *request, struct get_response_t *response)
 {
-	switch (attribute->attribute_id)
+	printf("class association_ln: get attribute\n");
+
+	switch (request->get_request_normal.cosem_attribute_descriptor.attribute_id)
 	{
 	case association_ln_logical_name:
-		return encode_association_ln_logical_name(attribute, pdu);
+		return encode_association_ln_logical_name(request, response);
 	}
 
-	return COSEM_EXCEPTION();
+	// Attribute not found
+	response->data_access_result = access_result_scope_of_access_violated;
+
+	return 0;
 }
 
 const struct cosem_class_t class_association_ln = {

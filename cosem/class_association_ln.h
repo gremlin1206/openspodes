@@ -25,6 +25,9 @@ SOFTWARE.
 #ifndef COSEM_CLASS_ASSOCIATION_LN_H_
 #define COSEM_CLASS_ASSOCIATION_LN_H_
 
+#include "objects.h"
+#include "class.h"
+
 /*
  * Class ID 15
  */
@@ -56,6 +59,11 @@ enum class_association_ln_method_t
 	association_ln_remove_object,
 	association_ln_add_user,
 	association_ln_remove_user,
+};
+
+struct cosem_association_ln_object_t
+{
+	struct cosem_object_t base; // must be the first struct member
 };
 
 extern const struct cosem_class_t class_association_ln;
