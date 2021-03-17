@@ -118,11 +118,24 @@ struct cosem_longname_t
 	unsigned char F;
 };
 
+struct cosem_key_t
+{
+	unsigned char bytes[16];
+	unsigned int length;
+};
+
 struct cosem_attribute_descriptor_t
 {
 	unsigned short class_id;
 	struct cosem_longname_t instance_id;
 	signed char    attribute_id;
+};
+
+struct cosem_method_descriptor_t
+{
+	unsigned short class_id;
+	struct cosem_longname_t instance_id;
+	signed char    method_id;
 };
 
 struct cosem_method_descripor_t
@@ -156,7 +169,7 @@ enum mechanism_name_t
 
 struct authentication_value_t
 {
-	unsigned char key[16];
+	unsigned char bytes[16];
 	unsigned char length;
 };
 
@@ -270,6 +283,40 @@ enum get_request_type_t
 	get_request_normal_type = 1,
 	get_request_next_type = 2,
 	get_request_with_list_type = 3,
+};
+
+enum action_request_type_t
+{
+	action_request_normal_type                = 1,
+	action_request_next_pblock                = 2,
+	action_request_with_list                  = 3,
+	action_request_with_first_pblock          = 4,
+	action_request_with_list_and_first_pblock = 5,
+	action_request_with_pblock                = 6,
+};
+
+struct action_request_normal_t
+{
+	struct cosem_method_descriptor_t  cosem_method_descriptor;
+	unsigned char *data;
+	unsigned int data_length;
+};
+
+enum action_result_t
+{
+	action_result_success                     = 0,
+	action_result_hardware_fault              = 1,
+	action_result_temporary_failure           = 2,
+	action_result_read_write_denied           = 3,
+	action_result_object_undefined            = 4,
+	action_result_object_class_inconsistent   = 9,
+	action_result_object_unavailable          = 11,
+	action_result_type_unmatched              = 12,
+	action_result_scope_of_access_violated    = 13,
+	action_result_data_block_unavailable      = 14,
+	action_result_long_action_aborted         = 15,
+	action_result_no_long_action_in_progress  = 16,
+	action_result_other_reason                = 250
 };
 
 struct aarq_t

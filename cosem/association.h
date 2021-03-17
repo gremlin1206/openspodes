@@ -32,9 +32,11 @@ struct cosem_ctx_t;
 struct cosem_association_t
 {
 	int associated;
+	int authenticated;
 	enum mechanism_name_t mechanism_name;
 	struct authentication_value_t calling_authentication;
 	struct conformance_t negotiated_conformance;
+	struct authentication_value_t ctos_challenge;
 };
 
 int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *a, struct aarq_t *aarq, struct aare_t *aare);

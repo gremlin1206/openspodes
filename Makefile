@@ -16,6 +16,10 @@ OBJS += cosem/objects.o
 OBJS += cosem/association.o
 OBJS += cosem/class_association_ln.o
 
+OBJS += crypto/aes-gcm.o
+OBJS += crypto/aes-internal-enc.o
+OBJS += crypto/aes-internal.o
+
 APP := spodes
 
 LD := gcc
@@ -24,6 +28,7 @@ CC := gcc
 INCLUDES += -I$(CURDIR)
 
 CFLAGS := $(INCLUDES) -Wall
+LDFLAGS :=
 
 app: $(OBJS)
 	$(LD) $(OBJS) $(LDFLAGS) -o $(APP)

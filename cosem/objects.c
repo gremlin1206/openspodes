@@ -67,3 +67,24 @@ int cosem_object_get_attribute(struct get_request_t *request, struct get_respons
 
 	return cosem_class->get(request, response);
 }
+
+int cosem_object_action(struct action_request_t *request, struct action_response_t *response)
+{
+	const struct cosem_class_t *cosem_class = request->object->cosem_class;
+
+	printf("cosem_object_action\n");
+
+	if (request->action_request_normal.cosem_method_descriptor.class_id != cosem_class->id) {
+		printf("cosem_object_get_attribute: object class inconsistent\n");
+		response->result = action_result_object_class_inconsistent;
+		return 0;
+	}
+
+	if (cosem_class->get == 0) {
+		printf("cosem_object_get_attribute: method get not implemented\n");
+		response->result = action_result_scope_of_access_violated;
+		return 0;
+	}
+
+	return cosem_class->action(request, response);
+}

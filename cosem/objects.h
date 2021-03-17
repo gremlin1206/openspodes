@@ -31,8 +31,11 @@ struct cosem_object_t;
 struct cosem_ctx_t;
 struct get_request_t;
 struct get_response_t;
+struct action_request_t;
+struct action_response_t;
 
 typedef int (*cosem_get_attribute_t)(struct get_request_t *request, struct get_response_t *response);
+typedef int (*cosem_action_t)(struct action_request_t *request, struct action_response_t *response);
 //typedef int cosem_set_attribute(int attribute);
 //typedef int cosem_call_method(int method);
 
@@ -40,6 +43,7 @@ struct cosem_class_t
 {
 	int id;
 	cosem_get_attribute_t get;
+	cosem_action_t        action;
 };
 
 struct cosem_object_t
@@ -66,8 +70,29 @@ struct get_response_t
 	unsigned int length;
 };
 
+struct action_request_t
+{
+	enum action_request_type_t type;
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	union {
+		struct action_request_normal_t action_request_normal;
+	};
+
+	struct cosem_ctx_t *ctx;
+	struct cosem_object_t *object;
+};
+
+struct action_response_t
+{
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	enum action_result_t result;
+	unsigned char *buffer;
+	unsigned int length;
+};
+
 struct cosem_object_t *cosem_find_object_by_name(struct cosem_longname_t name);
 
 int cosem_object_get_attribute(struct get_request_t *request, struct get_response_t *response);
+int cosem_object_action(struct action_request_t *request, struct action_response_t *response);
 
 #endif /* COSEM_OBJECTS_H_ */

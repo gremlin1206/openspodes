@@ -25,6 +25,9 @@ SOFTWARE.
 #include <string.h>
 #include <stdio.h>
 
+#include <crypto/aes.h>
+
+#include "cosem.h"
 #include "class_association_ln.h"
 
 static int encode_association_ln_logical_name(struct get_request_t *request, struct get_response_t *response)
@@ -38,6 +41,42 @@ static int encode_association_ln_logical_name(struct get_request_t *request, str
 
 	memcpy(response->buffer, payload, sizeof(payload));
 	response->length = sizeof(payload);
+
+	return 0;
+}
+
+static int reply_to_hls_authentication(struct action_request_t *request, struct action_response_t *response)
+{
+	unsigned char reply[16];
+	void *aes;
+	unsigned int i;
+
+	printf("reply_to_hls_authentication\n");
+
+	printf("CtoS: ");
+	for (i = 0; i < request->ctx->association.ctos_challenge.length; i++) {
+		printf("%02X ", request->ctx->association.ctos_challenge.bytes[i]);
+	}
+	printf("\n");
+
+	aes = aes_encrypt_init(request->ctx->hls_auth_key.bytes, request->ctx->hls_auth_key.length);
+	aes_encrypt(aes, request->ctx->association.ctos_challenge.bytes, reply);
+	aes_encrypt_deinit(aes);
+
+	response->buffer[0] = 0x01;
+	response->buffer[1] = 0x00;
+	response->buffer[2] = 0x09;
+	response->buffer[3] = 0x10;
+
+	memcpy(&response->buffer[4], reply, sizeof(reply));
+
+	printf("reply: ");
+	for (i = 0; i < 16; i++) {
+		printf("%02X ", reply[i]);
+	}
+	printf("\n");
+
+	response->length = sizeof(reply) + 4;
 
 	return 0;
 }
@@ -58,7 +97,24 @@ static int get_attribute(struct get_request_t *request, struct get_response_t *r
 	return 0;
 }
 
+static int action(struct action_request_t *request, struct action_response_t *response)
+{
+	printf("class association_ln: action\n");
+
+	switch (request->action_request_normal.cosem_method_descriptor.method_id)
+	{
+	case association_ln_reply_to_hls_authentication:
+		return reply_to_hls_authentication(request, response);
+	}
+
+	// Method not found
+	response->result = action_result_scope_of_access_violated;
+
+	return 0;
+}
+
 const struct cosem_class_t class_association_ln = {
 	.id = 15,
 	.get = get_attribute,
+	.action = action,
 };

@@ -41,6 +41,28 @@ static int cosem_validate_lls_password(struct cosem_ctx_t *ctx, struct authentic
 	return 0;
 }
 
+static int cosem_gmac_authentication_pass1(struct cosem_ctx_t *ctx, struct cosem_association_t *a, struct aarq_t *aarq, struct aare_t *aare)
+{
+	printf("cosem_gmac_authentication_pass1\n");
+
+
+	aare->has_acse_requirements = 1;
+	aare->acse_requirements.value = 0x0780;
+
+	aare->has_mechanism_name = 1;
+	aare->mechanism_name = aarq->mechanism_name;
+
+	a->ctos_challenge = aarq->calling_authentication;
+
+	printf("mechanism requested: %02X\n", aarq->mechanism_name);
+
+	aare->has_responding_authentication_value = 1;
+	memset(aare->responding_authentication_value.bytes, '1', 16);
+	aare->responding_authentication_value.length = 16;
+
+	return 0;
+}
+
 int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *a, struct aarq_t *aarq, struct aare_t *aare)
 {
 	int ret;
@@ -73,9 +95,12 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 		break;
 
 	case cosem_high_level_security:
-		break;
-
 	case cosem_high_level_security_gmac:
+		ret = cosem_gmac_authentication_pass1(ctx, a, aarq, aare);
+		if (ret < 0) {
+			cosem_reject_association(aarq, aare, acse_service_user_authentication_failure);
+			return 0;
+		}
 		break;
 
 	default:

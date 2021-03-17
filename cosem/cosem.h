@@ -31,6 +31,8 @@ SOFTWARE.
 
 struct cosem_ctx_t
 {
+	struct cosem_key_t hls_auth_key;
+	struct cosem_key_t lls_auth_key;
 	struct cosem_association_t association;
 };
 
