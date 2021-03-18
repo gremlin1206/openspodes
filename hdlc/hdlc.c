@@ -45,7 +45,7 @@ SOFTWARE.
 #define LLC_HEADER_LENGTH          3
 
 #define HDLC_BYTE_TIMEOUT_MS       500
-#define HDLC_INACTIVITY_TIMEOUT_MS 5000
+#define HDLC_INACTIVITY_TIMEOUT_MS 6000
 
 static int hdlc_send_dm_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 {
@@ -143,7 +143,7 @@ static int hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *fra
 	unsigned char *data;
 	unsigned int length;
 
-	printf("Send I response\n");
+	PRINTF("Send I response\n");
 
 	if (!frame->control.pf)
 		return 0;
@@ -169,7 +169,7 @@ static int hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *fra
 
 	max_info_len = hdlc_frame_max_info_length(frame, ctx->out_bs.max_length);
 	if (length > max_info_len) {
-		printf("set fragmented bit\n");
+		PRINTF("set fragmented bit\n");
 		length = max_info_len;
 		response.format.S = 1;
 	}
@@ -219,6 +219,8 @@ static int hdlc_send_frmr_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *
 
 static void hdlc_disconnect(struct hdlc_ctx_t *ctx)
 {
+	PRINTF("HDLC disconnect\n");
+
 	hdlc_bs_reset(&ctx->in_bs);
 	hdlc_bs_reset(&ctx->out_bs);
 	cosem_pdu_reset(&ctx->pdu);
@@ -260,7 +262,7 @@ static int hdlc_cmd_snrm(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 static int hdlc_cmd_rr(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 {
 	unsigned int pdu_length;
-	printf("RR command received\n");
+	PRINTF("RR command received\n");
 
 	if (ctx->state == HDLC_STATE_NDM) {
 		hdlc_send_dm_response(ctx, frame);
@@ -290,22 +292,24 @@ static int llc_input(struct hdlc_ctx_t *ctx, struct cosem_pdu_t *pdu)
 {
 	int ret;
 	unsigned char *llc_header;
-	unsigned int i;
 
 	if (pdu->length < LLC_HEADER_LENGTH) {
-		printf("no LLC header\n");
+		PRINTF("no LLC header\n");
 		return -1;
 	}
 
+#ifdef DLMS_HDLC_DEBUG
+	unsigned int i;
 	for (i = 0; i < pdu->length; i++) {
 		printf("%02X ", pdu->data[i]);
 	}
 	printf("\n");
+#endif
 
 	llc_header = cosem_pdu_header(pdu);
 
 	if (llc_header[0] != LLC_REMOTE_LSAP || llc_header[1] != LLC_LOCAL_LSAP_REQUEST) {
-		printf("invalid LLC header\n");
+		PRINTF("invalid LLC header\n");
 		return -1;
 	}
 
@@ -327,7 +331,7 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 	int ret;
 	int fragmented;
 
-	printf("I command received\n");
+	PRINTF("I command received\n");
 
 	if (ctx->state == HDLC_STATE_NDM) {
 		hdlc_send_dm_response(ctx, frame);
@@ -335,13 +339,13 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 	}
 
 	if (ctx->nr != frame->control.ns) {
-		printf("nr-ns mismatch\n");
+		PRINTF("nr-ns mismatch\n");
 		hdlc_send_rr_response(ctx, frame);
 		return HDLC_OK;
 	}
 
 	if (ctx->ns != frame->control.nr) {
-		printf("ns-nr mismatch\n");
+		PRINTF("ns-nr mismatch\n");
 		hdlc_send_frmr_response(ctx, frame);
 		return HDLC_OK;
 	}
@@ -354,6 +358,8 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 		 * Drop the response if we received a new data
 		 */
 		cosem_pdu_reset(&ctx->pdu);
+		ctx->pdu_output_offset = 0;
+		ctx->last_sent_length = 0;
 	}
 
 	ret = cosem_pdu_append_buffer(&ctx->pdu, frame->info, frame->info_len);
@@ -368,15 +374,16 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 		return HDLC_OK;
 	}
 
+	ctx->pdu_output_offset = 0;
+	ctx->last_sent_length = 0;
+
 	ret = llc_input(ctx, &ctx->pdu);
 	if (ret < 0) {
-		printf("dlms handling error\n");
+		PRINTF("dlms handling error\n");
+		cosem_pdu_reset(&ctx->pdu);
 		hdlc_send_rr_response(ctx, frame);
 		return HDLC_OK;
 	}
-
-	ctx->pdu_output_offset = 0;
-	ctx->last_sent_length = 0;
 
 	hdlc_send_i_response(ctx, frame);
 	ctx->ns = (ctx->ns + 1) & 0x7;
