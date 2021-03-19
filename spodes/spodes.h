@@ -22,34 +22,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef COSEM_ASSOCIATION_H_
-#define COSEM_ASSOCIATION_H_
+#ifndef COSEM_SPODES_H_
+#define COSEM_SPODES_H_
 
-#include "types.h"
+struct hdlc_address_t;
 
-struct cosem_ctx_t;
-
-struct cosem_association_t
+enum spodes_access_level_t
 {
-	int associated;
-	int authenticated;
-	enum mechanism_name_t mechanism_name;
-	struct authentication_value_t calling_authentication;
-	struct conformance_t negotiated_conformance;
-	struct authentication_value_t ctos_challenge;
-	struct authentication_value_t stoc_challenge;
-	struct hdlc_address_t client_address;
-	enum spodes_access_level_t spodes_access_level;
+	spodes_access_level_public       = 0,
+	spodes_access_level_reader       = 1,
+	spodes_access_level_configurator = 2,
 };
 
-int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *a, struct aarq_t *aarq, struct aare_t *aare);
-void cosem_association_close(struct cosem_ctx_t *ctx, struct cosem_association_t *a);
+int spodes_client_address_to_access_level(struct hdlc_address_t *address);
 
-int cosem_association_high_level_security_authentication_stage2(struct cosem_ctx_t *ctx,
-		struct cosem_association_t *a, const unsigned char *fStoC_input, unsigned char *fCtoS_output);
-
-int cosem_check_access(struct cosem_ctx_t *ctx, struct cosem_association_t *a);
-
-struct cosem_object_t *cosem_association_get_object(struct cosem_longname_t name);
-
-#endif /* COSEM_ASSOCIATION_H_ */
+#endif /* COSEM_SPODES_H_ */

@@ -25,11 +25,11 @@ SOFTWARE.
 #ifndef COSEM_TYPES_H_
 #define COSEM_TYPES_H_
 
+#include <spodes/spodes.h>
+#include <hdlc/frame.h>
 
 enum apdu_tag_t
 {
-	apdu_tag_confirmed_service_error     = 0x0E,
-
 	apdu_tag_aa_request                  = 0x60,
 	apdu_tag_aa_response                 = 0x61,
 	apdu_tag_get_request                 = 0xC0,
@@ -53,7 +53,7 @@ enum apdu_tag_t
 enum cosem_error_service_t
 {
 	cosem_error_initiate = 1,
-	cosem_error_read = 5,
+	cosem_error_read     = 5,
 };
 
 enum cosem_error_t
@@ -87,12 +87,6 @@ enum cosem_error_t
 	cosem_error_access_object_access_violated,
 	cosem_error_access_hardware_fault,
 	cosem_error_access_object_unavailable,
-};
-
-struct confirmed_service_error_t
-{
-	enum cosem_error_service_t service;
-
 };
 
 struct invoke_id_and_priority_t
@@ -220,6 +214,12 @@ struct initiate_response_t
 	unsigned short vaa_name;
 };
 
+struct confirmed_service_error_t
+{
+	enum cosem_error_service_t        service;
+	enum cosem_error_t                error;
+};
+
 enum association_result_t
 {
 	association_result_accepted = 0,
@@ -229,7 +229,8 @@ enum association_result_t
 
 enum acse_service_user_t
 {
-	acse_service_user_null,
+	acse_service_user_no_error = -1,
+	acse_service_user_null = 0,
 	acse_service_user_no_reason_given,
 	acse_service_user_application_context_name_not_supported,
 	acse_service_user_calling_AP_title_not_recognized,
@@ -248,7 +249,8 @@ enum acse_service_user_t
 
 enum acse_service_provider_t
 {
-	acse_service_provider_null,
+	acse_service_provider_no_error = -1,
+	acse_service_provider_null = 0,
 	acse_service_provider_no_reason_given,
 	no_common_acse_version,
 };
@@ -298,8 +300,8 @@ enum action_request_type_t
 struct action_request_normal_t
 {
 	struct cosem_method_descriptor_t  cosem_method_descriptor;
-	unsigned char *data;
-	unsigned int data_length;
+	const unsigned char *data;
+	unsigned int length;
 };
 
 enum action_result_t
@@ -321,19 +323,38 @@ enum action_result_t
 
 struct aarq_t
 {
+	unsigned int has_protocol_version : 1;
+	unsigned int has_application_context_name : 1;
+	unsigned int has_mechanism_name : 1;
+	unsigned int has_calling_authentication : 1;
+	unsigned int has_acse_requirements : 1;
+	unsigned int has_initiate_request : 1;
+
 	enum application_context_name_t   application_context_name;
-	struct acse_requirements_t        acse_requirements;
 	enum mechanism_name_t             mechanism_name;
 	struct authentication_value_t     calling_authentication;
 	struct initiate_request_t         initiate_request;
+	unsigned short                    protocol_version;
+	unsigned short                    acse_requirements;
+
+	struct hdlc_address_t             client_address;
+};
+
+union association_information_t
+{
+	struct initiate_response_t        initiate_response;
+	struct confirmed_service_error_t  confirmed_service_error;
 };
 
 struct aare_t
 {
+	unsigned int has_protocol_version;
 	unsigned int has_acse_requirements : 1;
 	unsigned int has_mechanism_name : 1;
 	unsigned int has_responding_authentication_value : 1;
+	unsigned int has_confirmed_service_error : 1;
 
+	unsigned short                    protocol_version;                // 80
 	enum application_context_name_t   application_context_name;        // A1
 	enum association_result_t         association_result;              // A2
 	enum acse_service_user_t          acse_service_user;               // A3
@@ -341,8 +362,7 @@ struct aare_t
 	struct acse_requirements_t        acse_requirements;               // 88
 	enum mechanism_name_t             mechanism_name;                  // 89
 	struct authentication_value_t     responding_authentication_value; // AA
-	struct initiate_response_t        initiate_response;               // BE
-
+	union association_information_t   user_information;                // BE
 };
 
 #endif /* COSEM_TYPES_H_ */

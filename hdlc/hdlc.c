@@ -377,6 +377,9 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 	ctx->pdu_output_offset = 0;
 	ctx->last_sent_length = 0;
 
+	ctx->pdu.server_address = frame->dest_address;
+	ctx->pdu.client_address = frame->src_address;
+
 	ret = llc_input(ctx, &ctx->pdu);
 	if (ret < 0) {
 		PRINTF("dlms handling error\n");

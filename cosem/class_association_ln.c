@@ -25,8 +25,6 @@ SOFTWARE.
 #include <string.h>
 #include <stdio.h>
 
-#include <crypto/aes.h>
-
 #include "cosem.h"
 #include "class_association_ln.h"
 
@@ -48,20 +46,20 @@ static int encode_association_ln_logical_name(struct get_request_t *request, str
 static int reply_to_hls_authentication(struct action_request_t *request, struct action_response_t *response)
 {
 	unsigned char reply[16];
-	void *aes;
-	unsigned int i;
+	int ret;
 
-	printf("reply_to_hls_authentication\n");
-
-	printf("CtoS: ");
-	for (i = 0; i < request->ctx->association.ctos_challenge.length; i++) {
-		printf("%02X ", request->ctx->association.ctos_challenge.bytes[i]);
+	if (request->action_request_normal.length != 16) {
+		printf("reply_to_hls_authentication: wrong request length\n");
+		response->result = action_result_temporary_failure;
+		return 0;
 	}
-	printf("\n");
 
-	aes = aes_encrypt_init(request->ctx->hls_auth_key.bytes, request->ctx->hls_auth_key.length);
-	aes_encrypt(aes, request->ctx->association.ctos_challenge.bytes, reply);
-	aes_encrypt_deinit(aes);
+	ret = cosem_association_high_level_security_authentication_stage2(request->ctx, &request->ctx->association, request->action_request_normal.data, reply);
+	if (ret < 0) {
+		printf("reply_to_hls_authentication: authentication failed/n");
+		response->result = action_result_temporary_failure;
+		return 0;
+	}
 
 	response->buffer[0] = 0x01;
 	response->buffer[1] = 0x00;
@@ -69,12 +67,6 @@ static int reply_to_hls_authentication(struct action_request_t *request, struct 
 	response->buffer[3] = 0x10;
 
 	memcpy(&response->buffer[4], reply, sizeof(reply));
-
-	printf("reply: ");
-	for (i = 0; i < 16; i++) {
-		printf("%02X ", reply[i]);
-	}
-	printf("\n");
 
 	response->length = sizeof(reply) + 4;
 

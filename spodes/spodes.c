@@ -22,41 +22,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef COSEM_PDU_H_
-#define COSEM_PDU_H_
+#include <stdio.h>
 
 #include <hdlc/frame.h>
 
-#ifdef  CONFIG_DLMS_MAX_PDU_SIZE
-#  define DLMS_MAX_PDU_SIZE CONFIG_DLMS_MAX_PDU_SIZE
-#else
-#  define DLMS_MAX_PDU_SIZE 1024
-#endif
+#include "spodes.h"
 
-#ifdef  CONFIG_DLMS_MAX_PDU_HEADER_SIZE
-#  define DLMS_MAX_PDU_HEADER_SIZE CONFIG_DLMS_MAX_PDU_HEADER_SIZE
-#else
-#  define DLMS_MAX_PDU_HEADER_SIZE 16
-#endif
-
-struct cosem_pdu_t
+int spodes_client_address_to_access_level(struct hdlc_address_t *address)
 {
-	struct hdlc_address_t server_address;
-	struct hdlc_address_t client_address;
+	if (address->len != 1) {
+		printf("spodes_client_address_to_access_level: invalid address length %u\n", address->len);
+		return -1;
+	}
 
-	unsigned char data[DLMS_MAX_PDU_HEADER_SIZE + DLMS_MAX_PDU_SIZE];
-	unsigned int length;
-	unsigned int header;
-};
+	switch (address->upper) {
+	case 16:
+		return spodes_access_level_public;
 
-void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int header);
+	case 32:
+		return spodes_access_level_reader;
 
-void cosem_pdu_reset(struct cosem_pdu_t *pdu);
-int cosem_pdu_append_buffer(struct cosem_pdu_t *pdu, const void *buffer, unsigned int length);
+	case 48:
+		return spodes_access_level_configurator;
 
-unsigned char* cosem_pdu_header(struct cosem_pdu_t *pdu);
-unsigned char* cosem_pdu_payload(struct cosem_pdu_t *pdu);
-unsigned int cosem_pdu_payload_length(struct cosem_pdu_t *pdu);
-void cosem_pdu_set_payload_length(struct cosem_pdu_t *pdu, unsigned int length);
-
-#endif /* COSEM_PDU_H_ */
+	default:
+		printf("spodes_client_address_to_access_level: unknown client address %u\n", address->upper);
+		return -1;
+	}
+}

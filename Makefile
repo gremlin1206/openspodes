@@ -20,7 +20,9 @@ OBJS += crypto/aes-gcm.o
 OBJS += crypto/aes-internal-enc.o
 OBJS += crypto/aes-internal.o
 
-APP := spodes
+OBJS += spodes/spodes.o
+
+APP := spodes_sim
 
 LD := gcc
 CC := gcc
