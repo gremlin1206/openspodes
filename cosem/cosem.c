@@ -29,15 +29,13 @@ SOFTWARE.
 #include "cosem.h"
 #include "objects.h"
 
-#if 0
-static void cosem_append_exception(struct cosem_pdu_t *pdu)
+static int cosem_encode_exception(unsigned char *buffer, enum cosem_state_error_t state_error, enum cosem_service_error_t service_error)
 {
-	unsigned char *p = &pdu->data[pdu->length];
-
-	pdu->length += 4;
-	p[0] = apdu_tag_exception_response;
+	buffer[0] = apdu_tag_exception_response;
+	buffer[1] = (unsigned char)state_error;
+	buffer[2] = (unsigned char)service_error;
+	return 3;
 }
-#endif
 
 static int cosem_decode_protocol_version(struct aarq_t *request, const unsigned char **buffer, unsigned int *length)
 {
@@ -312,6 +310,21 @@ static int cosem_encode_responding_authentication_value(unsigned char *buffer, c
 	return p - buffer;
 }
 
+static int cosem_decode_dedicated_key_dummy(const unsigned char **buffer, unsigned int *length)
+{
+	int ret;
+	unsigned int len;
+
+	ret = asn_get_length(&len, buffer, length);
+	if (ret < 0)
+		return ret;
+
+	*buffer += len;
+	*length -= len;
+
+	return 0;
+}
+
 static int cosem_decode_initiate_request(struct aarq_t *request, const unsigned char **buffer, unsigned int *length)
 {
 	int ret;
@@ -353,8 +366,11 @@ static int cosem_decode_initiate_request(struct aarq_t *request, const unsigned 
 	if (ret < 0)
 		return ret;
 
-	if (option != 0)
-		return -1;
+	if (option) {
+		ret = cosem_decode_dedicated_key_dummy(&block_buffer, &block_length);
+		if (ret < 0)
+			return ret;
+	}
 
 	ret = asn_get_uint8(&option, &block_buffer, &block_length);
 	if (ret < 0)
@@ -526,7 +542,13 @@ static int cosem_encode_aare(unsigned char *buffer, const struct aare_t *aare)
 		return ret;
 	p += ret;
 
-	if (aare->association_result == association_result_accepted) {
+	if (aare->has_confirmed_service_error) {
+		ret = cosem_encode_confirmed_service_error(p, &aare->user_information.confirmed_service_error);
+		if (ret < 0)
+			return ret;
+		p += ret;
+	}
+	else if (aare->association_result == association_result_accepted) {
 		if (aare->has_acse_requirements) {
 			ret = cosem_encode_acse_requirements(p, aare->acse_requirements);
 			if (ret < 0)
@@ -548,10 +570,8 @@ static int cosem_encode_aare(unsigned char *buffer, const struct aare_t *aare)
 			p += ret;
 		}
 
-		if (aare->has_confirmed_service_error)
-			ret = cosem_encode_confirmed_service_error(p, &aare->user_information.confirmed_service_error);
-		else
-			ret = cosem_encode_initiate_response(p, &aare->user_information.initiate_response);
+
+		ret = cosem_encode_initiate_response(p, &aare->user_information.initiate_response);
 		if (ret < 0)
 			return ret;
 		p += ret;
@@ -562,6 +582,20 @@ static int cosem_encode_aare(unsigned char *buffer, const struct aare_t *aare)
 	buffer[1] = length;
 
 	return (int)length + 2 /* 1 tag byte and 1 length byte */;
+}
+
+static int cosem_encode_aare_exception(unsigned char *buffer, enum acse_service_user_t service_user)
+{
+	struct aare_t aare;
+
+	memset(&aare, 0, sizeof(aare));
+
+	aare.application_context_name = application_context_long_names_clear_text;
+	aare.association_result = association_result_rejected_permanent;
+	aare.acse_service_user = service_user;
+	aare.acse_service_provider = acse_service_provider_no_error;
+
+	return cosem_encode_aare(buffer, &aare);
 }
 
 // C0
@@ -823,19 +857,15 @@ static int dlms_process_aa_request(struct cosem_ctx_t *ctx, struct cosem_pdu_t *
 
 	ret = cosem_decode_aarq(&request, buffer, length);
 	if (ret < 0)
-		return ret;
+		return cosem_encode_aare_exception(buffer, acse_service_user_no_reason_given);
 
 	request.client_address = pdu->client_address;
 
 	ret = cosem_process_aa_request(ctx, &request, &response);
 	if (ret < 0)
-		return ret;
+		return cosem_encode_aare_exception(buffer, acse_service_user_no_reason_given);
 
-	ret = cosem_encode_aare(buffer, &response);
-	if (ret < 0)
-		return ret;
-
-	return ret;
+	return cosem_encode_aare(buffer, &response);
 }
 
 static int dlms_process_get_request(struct cosem_ctx_t *ctx, unsigned char *buffer, unsigned int length)
@@ -849,7 +879,7 @@ static int dlms_process_get_request(struct cosem_ctx_t *ctx, unsigned char *buff
 	ret = cosem_decode_get_request(&request, buffer, length);
 	if (ret < 0) {
 		printf("dlms_process_get_request: parse failed\n");
-		return ret;
+		return cosem_encode_exception(buffer, cosem_state_error_service_not_allowed, cosem_service_error_operation_not_possible);
 	}
 
 	request.ctx = ctx;

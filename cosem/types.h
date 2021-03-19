@@ -87,6 +87,28 @@ enum cosem_error_t
 	cosem_error_access_object_access_violated,
 	cosem_error_access_hardware_fault,
 	cosem_error_access_object_unavailable,
+
+	/*
+	 * initiate [6]
+	 */
+	cosem_error_initiate_other = (6 << 8),
+	cosem_error_initiate_dlms_version_too_low,
+	cosem_error_initiate_incompatible_conformance,
+	cosem_error_initiate_pdu_size_too_short,
+	cosem_error_initiate_refused_by_the_vde_handler,
+};
+
+enum cosem_state_error_t
+{
+	cosem_state_error_service_not_allowed = 1,
+	cosem_state_error_service_unknown     = 2,
+};
+
+enum cosem_service_error_t
+{
+	cosem_service_error_operation_not_possible = 1,
+	cosem_service_error_service_not_supported  = 2,
+	cosem_service_error_other_reason           = 3,
 };
 
 struct invoke_id_and_priority_t

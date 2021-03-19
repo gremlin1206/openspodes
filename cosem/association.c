@@ -242,7 +242,6 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 
 	memset(aare, 0, sizeof(*aare));
 
-
 	aare->association_result       = association_result_accepted;
 	aare->acse_service_user        = acse_service_user_null;
 	aare->acse_service_provider    = acse_service_provider_no_error;
@@ -264,6 +263,38 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 		return 0;
 	}
 
+	if (aarq->initiate_request.proposed_dlms_version_number < 6) {
+		cosem_reject_association_user(aare, acse_service_user_no_reason_given);
+
+		aare->has_confirmed_service_error = 1;
+		aare->user_information.confirmed_service_error.service = cosem_error_initiate;
+		aare->user_information.confirmed_service_error.error = cosem_error_initiate_dlms_version_too_low;
+
+		return 0;
+	}
+
+	if (aarq->initiate_request.server_max_receive_pdu_size < 128) {
+		cosem_reject_association_user(aare, acse_service_user_no_reason_given);
+
+		aare->has_confirmed_service_error = 1;
+		aare->user_information.confirmed_service_error.service = cosem_error_initiate;
+		aare->user_information.confirmed_service_error.error = cosem_error_initiate_pdu_size_too_short;
+
+		return 0;
+	}
+
+	if (!aarq->initiate_request.proposed_conformance.get) {
+		cosem_reject_association_user(aare, acse_service_user_no_reason_given);
+
+		aare->has_confirmed_service_error = 1;
+		aare->user_information.confirmed_service_error.service = cosem_error_initiate;
+		aare->user_information.confirmed_service_error.error = cosem_error_initiate_incompatible_conformance;
+
+		return 0;
+	}
+
+	initiate_response->negotiated_dlms_version_number = 6;
+
 	initiate_response->vaa_name = 7;
 
 	ret = cosem_authenticate_association(ctx, a, aarq, aare);
@@ -271,8 +302,6 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 		printf("authentication failed\n");
 		return 0;
 	}
-
-	initiate_response->negotiated_dlms_version_number = 6;
 
 	initiate_response->negotiated_conformance.selective_access = 1;
 	initiate_response->negotiated_conformance.set = 1;
