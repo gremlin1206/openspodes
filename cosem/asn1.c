@@ -25,60 +25,118 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 
-#include "asn1.h"
+#include <cosem/asn1.h>
+#include <cosem/pdu.h>
 
-int asn_get_length(unsigned int *out, const unsigned char **buffer, unsigned int *len)
+int asn_get_length(unsigned int *out, struct cosem_pdu_t *pdu)
 {
-	unsigned int length = *len;
-	unsigned int result;
-	unsigned char bytes;
-	const unsigned char *p = *buffer;
-	unsigned char byte;
+	int ret;
+	unsigned int result = 0;
+	int bytes;
+	int byte;
 
-	if (length < 1)
-		return -1;
-
-	byte = p[0]; length--; p++;
+	byte = cosem_pdu_get_byte(pdu);
+	if (byte < 0)
+		return byte;
 
 	if ((byte & 0x80) == 0) {
-		result = byte;
+		result = (unsigned int)byte;
+		bytes = 1;
 	}
 	else {
 		bytes = byte & ~0x80;
-		if (bytes > length || bytes > 4)
-			return -1;
 
-		length -= bytes;
+		switch (bytes) // bytes number of length value
+		{
+		case 1:
+			ret = asn_get_uint8((unsigned char*)&result, pdu);
+			break;
 
-		result = 0;
-		for (;;) {
-			result |= *p;
-			bytes--;
-			if (bytes == 0)
-				break;
-			result <<= 8;
-			p++;
+		case 2:
+			ret = asn_get_uint16((unsigned short*)&result, pdu);
+			break;
+
+		case 4:
+			ret = asn_get_uint32(&result, pdu);
+			break;
+
+		default:
+			ret = -1;
+			break;
 		}
+
+		if (ret < 0)
+			return ret;
+
+		bytes += 1;
 	}
 
-	printf("result %u, length: %u\n", result, length);
-
-	if (result > length)
+	if (result > pdu->length)
 		return -1;
 
-	*out = result;
-	*buffer = p;
-	*len = length;
-
-	return 0;
+	return bytes;
 }
 
-int asn_get_uint16(unsigned short *out, const unsigned char **buffer, unsigned int *length)
+int asn_put_length(unsigned int length, struct cosem_pdu_t *pdu)
+{
+	int ret;
+
+	if (length < 128) {
+		return asn_put_uint8((unsigned char)length, pdu);
+	}
+	else if (length < 65536) {
+		ret = asn_put_uint16((unsigned short)length, pdu);
+		if (ret < 0)
+			return ret;
+
+		ret = asn_put_uint8(0x82, pdu);
+		if (ret < 0)
+			return ret;
+
+		return 3;
+	}
+	else {
+		ret = asn_put_uint32((unsigned short)length, pdu);
+		if (ret < 0)
+			return ret;
+
+		ret = asn_put_uint8(0x84, pdu);
+		if (ret < 0)
+			return ret;
+
+		return 5;
+	}
+}
+
+int asn_get_uint32(unsigned int *out, struct cosem_pdu_t *pdu)
+{
+	unsigned int result;
+	unsigned char *p;
+
+	p = cosem_pdu_get_data(pdu, 4);
+	if (!p)
+		return -1;
+
+	result = p[0];
+	result <<= 8;
+	result |= p[1];
+	result <<= 8;
+	result |= p[2];
+	result <<= 8;
+	result |= p[3];
+
+	*out = result;
+
+	return 4;
+}
+
+int asn_get_uint16(unsigned short *out, struct cosem_pdu_t *pdu)
 {
 	unsigned short result;
-	const unsigned char *p = *buffer;
+	unsigned char *p;
 
-	if (*length < 2)
+	p = cosem_pdu_get_data(pdu, 2);
+	if (!p)
 		return -1;
 
 	result = p[0];
@@ -87,41 +145,107 @@ int asn_get_uint16(unsigned short *out, const unsigned char **buffer, unsigned i
 
 	*out = result;
 
-	*length -= 2;
-	*buffer += 2;
-
-	return 0;
+	return 2;
 }
 
-int asn_put_uint16(unsigned char *buffer, unsigned short value)
+int asn_get_uint8(unsigned char *out, struct cosem_pdu_t *pdu)
 {
-	buffer[0] = (unsigned char)(value >> 8);
-	buffer[1] = (unsigned char)(value & 0xFF);
+	int byte;
+
+	byte = cosem_pdu_get_byte(pdu);
+	if (byte < 0)
+		return byte;
+
+	*out = (unsigned char)byte;
+
+	return 1;
+}
+
+int asn_put_uint8(unsigned char value, struct cosem_pdu_t *pdu)
+{
+	unsigned char *p;
+
+	p = cosem_pdu_put_cosem_data(pdu, 1);
+	if (!p)
+		return -1;
+
+	p[0] = value;
+
+	return 1;
+}
+
+int asn_put_uint16(unsigned short value, struct cosem_pdu_t *pdu)
+{
+	unsigned char *p;
+
+	p = cosem_pdu_put_cosem_data(pdu, 2);
+	if (!p)
+		return -1;
+
+	p[0] = (unsigned char)(value >> 8);
+	p[1] = (unsigned char)(value & 0xFF);
 
 	return 2;
 }
 
-int asn_get_uint8(unsigned char *out, const unsigned char **buffer, unsigned int *length)
+int asn_put_uint32(unsigned int value, struct cosem_pdu_t *pdu)
 {
-	const unsigned char *p = *buffer;
+	unsigned char *p;
 
-	if (*length < 1)
+	p = cosem_pdu_put_cosem_data(pdu, 4);
+	if (!p)
 		return -1;
 
-	*out = p[0];
+	p[3] = (unsigned char)(value & 0xFF); value >>= 8;
+	p[2] = (unsigned char)(value & 0xFF); value >>= 8;
+	p[1] = (unsigned char)(value & 0xFF); value >>= 8;
+	p[0] = (unsigned char)(value & 0xFF);
 
-	*length -= 1;
-	*buffer += 1;
-
-	return 0;
+	return 4;
 }
 
-int asn_get_buffer(void *out, unsigned int bytes, const unsigned char **buffer, unsigned int *length)
+int asn_get_tagged_data(struct asn1_tagged_data_t *out, struct cosem_pdu_t *pdu)
 {
-	if (bytes > *length)
-		return -1;
+	int ret;
+	unsigned int length;
+	unsigned int bytes;
 
-	memcpy(out, *buffer, bytes); *buffer += bytes; *length -= bytes;
+	ret = asn_get_uint8(&out->tag, pdu);
+	if (ret < 0)
+		return ret;
 
-	return 0;
+	bytes = 1;
+
+	ret = asn_get_length(&length, pdu);
+	if (ret < 0)
+		return ret;
+
+	bytes += (unsigned int)ret;
+	bytes += length;
+
+	ret = cosem_pdu_get_sub_pdu(&out->pdu, pdu, length);
+	if (ret < 0)
+		return ret;
+
+	return (int)bytes;
+}
+
+int asn_put_tagged_data(unsigned char tag, unsigned int length, struct cosem_pdu_t *pdu)
+{
+	int ret;
+	int bytes = (int)length;
+
+	ret = asn_put_length(length, pdu);
+	if (ret < 0)
+		return ret;
+
+	bytes += ret;
+
+	ret = asn_put_uint8(tag, pdu);
+	if (ret < 0)
+		return ret;
+
+	bytes += ret;
+
+	return bytes;
 }

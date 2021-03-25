@@ -22,21 +22,3 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_DLMS_H
-#define OPENSPODES_DLMS_H
-
-#include <cosem/cosem.h>
-#include <hdlc/hdlc.h>
-
-struct dlms_ctx_t
-{
-	struct cosem_ctx_t cosem;
-};
-
-int dlms_input(struct dlms_ctx_t *ctx, struct cosem_pdu_t *pdu);
-
-void dlms_close_association(struct dlms_ctx_t *ctx);
-
-int dlms_init(struct dlms_ctx_t *ctx);
-
-#endif /* OPENSPODES_DLMS_H */

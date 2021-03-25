@@ -27,36 +27,28 @@ SOFTWARE.
 
 #include <hdlc/frame.h>
 
-#ifdef  CONFIG_DLMS_MAX_PDU_SIZE
-#  define DLMS_MAX_PDU_SIZE CONFIG_DLMS_MAX_PDU_SIZE
-#else
-#  define DLMS_MAX_PDU_SIZE 1024
-#endif
-
-#ifdef  CONFIG_DLMS_MAX_PDU_HEADER_SIZE
-#  define DLMS_MAX_PDU_HEADER_SIZE CONFIG_DLMS_MAX_PDU_HEADER_SIZE
-#else
-#  define DLMS_MAX_PDU_HEADER_SIZE 16
-#endif
-
 struct cosem_pdu_t
 {
-	struct hdlc_address_t server_address;
-	struct hdlc_address_t client_address;
-
-	unsigned char data[DLMS_MAX_PDU_HEADER_SIZE + DLMS_MAX_PDU_SIZE];
+	int reversed;
+	unsigned char *head;
 	unsigned int length;
-	unsigned int header;
+	unsigned int length_limit;
+
+	unsigned int  max_length;
+	unsigned char *data;
 };
 
-void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int header);
+void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int length_limit, int reversed,
+		    void *buffer, unsigned int length);
 
 void cosem_pdu_reset(struct cosem_pdu_t *pdu);
-int cosem_pdu_append_buffer(struct cosem_pdu_t *pdu, const void *buffer, unsigned int length);
 
-unsigned char* cosem_pdu_header(struct cosem_pdu_t *pdu);
-unsigned char* cosem_pdu_payload(struct cosem_pdu_t *pdu);
-unsigned int cosem_pdu_payload_length(struct cosem_pdu_t *pdu);
-void cosem_pdu_set_payload_length(struct cosem_pdu_t *pdu, unsigned int length);
+unsigned char* cosem_pdu_put_cosem_data(struct cosem_pdu_t *pdu, unsigned int length);
+unsigned char* cosem_pdu_put_data(struct cosem_pdu_t *pdu, unsigned int length);
+unsigned char* cosem_pdu_get_data(struct cosem_pdu_t *pdu, unsigned int length);
+
+int cosem_pdu_get_byte(struct cosem_pdu_t *pdu);
+
+int cosem_pdu_get_sub_pdu(struct cosem_pdu_t *sub_pdu, struct cosem_pdu_t *pdu, unsigned int length);
 
 #endif /* COSEM_PDU_H_ */

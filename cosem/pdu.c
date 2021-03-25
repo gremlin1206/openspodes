@@ -24,52 +24,99 @@ SOFTWARE.
 
 #include <string.h>
 
-#include "pdu.h"
+#include <cosem/pdu.h>
 
-void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int header)
+static unsigned char* cosem_pdu_put_(struct cosem_pdu_t *pdu, unsigned int length, unsigned int limit)
 {
-	memset(pdu, 0, sizeof(*pdu));
-	pdu->header = header;
+	unsigned char *p;
+	int reversed = pdu->reversed;
+	unsigned int pdu_length = pdu->length;
+	unsigned int new_pdu_length = pdu_length + length;
+
+	if (new_pdu_length > limit)
+		return 0;
+
+	p = pdu->head;
+
+	if (reversed) {
+		p -= length;
+		pdu->head = p;
+	}
+	else {
+		pdu->head = p + length;
+	}
+
+	pdu->length = new_pdu_length;
+
+	return p;
+}
+
+void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int length_limit, int reversed,
+		    void *buffer, unsigned int length)
+{
+	pdu->data         = (unsigned char*)buffer;
+	pdu->max_length   = length;
+	pdu->length_limit = length_limit;
+	pdu->reversed     = reversed;
+
+	cosem_pdu_reset(pdu);
 }
 
 void cosem_pdu_reset(struct cosem_pdu_t *pdu)
 {
+	if (pdu->reversed)
+		pdu->head = pdu->data + pdu->max_length;
+	else
+		pdu->head = pdu->data;
 	pdu->length = 0;
 }
 
-int cosem_pdu_append_buffer(struct cosem_pdu_t *pdu, const void *buffer, unsigned int length)
+unsigned char* cosem_pdu_put_cosem_data(struct cosem_pdu_t *pdu, unsigned int length)
 {
-	unsigned int pdu_length = pdu->length;
-	unsigned int new_pdu_length = pdu_length + length;
+	return cosem_pdu_put_(pdu, length, pdu->length_limit);
+}
 
-	if (new_pdu_length > sizeof(pdu->data))
+unsigned char* cosem_pdu_put_data(struct cosem_pdu_t *pdu, unsigned int length)
+{
+	return cosem_pdu_put_(pdu, length, pdu->max_length);
+}
+
+unsigned char* cosem_pdu_get_data(struct cosem_pdu_t *pdu, void *buffer, unsigned int length)
+{
+	if (length > pdu->length)
 		return -1;
 
-	memcpy(pdu->data + pdu_length, buffer, length);
-	pdu->length = new_pdu_length;
+	pdu->head += length;
+	pdu->length -= length;
 
-	return (int)new_pdu_length;
+	return pdu->head;
 }
 
-unsigned char* cosem_pdu_header(struct cosem_pdu_t *pdu)
+int cosem_pdu_get_byte(struct cosem_pdu_t *pdu)
 {
-	return pdu->data;
-}
-
-unsigned char* cosem_pdu_payload(struct cosem_pdu_t *pdu)
-{
-	return pdu->data + pdu->header;
-}
-
-unsigned int cosem_pdu_payload_length(struct cosem_pdu_t *pdu)
-{
+	unsigned char byte;
 	unsigned int length = pdu->length;
-	unsigned int header = pdu->header;
 
-	return (length > header) ? length - header : 0;
+	if (length == 0)
+		return -1;
+
+	byte = pdu->head[0];
+	pdu->head++;
+	pdu->length = length - 1;
+
+	return byte;
 }
 
-void cosem_pdu_set_payload_length(struct cosem_pdu_t *pdu, unsigned int length)
+int cosem_pdu_get_sub_pdu(struct cosem_pdu_t *sub_pdu, struct cosem_pdu_t *pdu, unsigned int length)
 {
-	pdu->length = length + pdu->header;
+	unsigned char *p;
+
+	p = cosem_pdu_get_data(pdu, length);
+	if (!p)
+		return -1;
+
+	cosem_pdu_init(sub_pdu, length, 0, p, length);
+	sub_pdu->length = length;
+
+	return (int)length;
 }

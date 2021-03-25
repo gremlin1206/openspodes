@@ -28,18 +28,8 @@ SOFTWARE.
 #include "cosem.h"
 #include "class_association_ln.h"
 
-static int encode_association_ln_logical_name(struct get_request_t *request, struct get_response_t *response)
+static int encode_object_list(struct get_request_t *request, struct get_response_t *response)
 {
-	unsigned char payload[] = {
-		0x09, 0x06,
-		0, 0, 40, 0, 0, 255
-	};
-
-	payload[sizeof(payload) - 2] = request->get_request_normal.cosem_attribute_descriptor.instance_id.E;
-
-	memcpy(response->buffer, payload, sizeof(payload));
-	response->length = sizeof(payload);
-
 	return 0;
 }
 
@@ -79,14 +69,12 @@ static int get_attribute(struct get_request_t *request, struct get_response_t *r
 
 	switch (request->get_request_normal.cosem_attribute_descriptor.attribute_id)
 	{
-	case association_ln_logical_name:
-		return encode_association_ln_logical_name(request, response);
+	case association_ln_object_list:
+		return encode_object_list(request, response);
 	}
 
 	// Attribute not found
-	response->data_access_result = access_result_scope_of_access_violated;
-
-	return 0;
+	return access_result_scope_of_access_violated;
 }
 
 static int action(struct action_request_t *request, struct action_response_t *response)
@@ -99,14 +87,11 @@ static int action(struct action_request_t *request, struct action_response_t *re
 		return reply_to_hls_authentication(request, response);
 	}
 
-	// Method not found
-	response->result = action_result_scope_of_access_violated;
-
-	return 0;
+	return action_result_scope_of_access_violated;
 }
 
 const struct cosem_class_t class_association_ln = {
-	.id = 15,
-	.get = get_attribute,
-	.action = action,
+	.class_id = 15,
+	.get_normal = get_attribute,
+	.action_normal = action,
 };

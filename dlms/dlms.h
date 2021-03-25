@@ -22,25 +22,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#ifndef OPENSPODES_DLMS_H
+#define OPENSPODES_DLMS_H
 
-#include <cosem/types.h>
-#include <cosem/pdu.h>
-#include <cosem/association.h>
-#include <spodes/spodes.h>
+#include <cosem/cosem.h>
+#include <hdlc/hdlc.h>
 
-struct cosem_ctx_t
+struct dlms_ctx_t
 {
-	struct cosem_key_t hls_auth_key;
-	struct cosem_key_t lls_auth_key;
-	struct cosem_association_t association;
+	struct cosem_ctx_t cosem;
 };
 
-int cosem_input(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level,
-		struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu);
-void cosem_close_association(struct cosem_ctx_t *ctx);
+int dlms_input(struct dlms_ctx_t *ctx, enum spodes_access_level_t access_level,
+	       struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu);
 
-int cosem_init(struct cosem_ctx_t *ctx);
+void dlms_close_association(struct dlms_ctx_t *ctx);
 
-#endif /* OPENSPODES_COSEM_H */
+int dlms_init(struct dlms_ctx_t *ctx);
+
+#endif /* OPENSPODES_DLMS_H */

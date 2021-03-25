@@ -30,8 +30,8 @@ SOFTWARE.
 
 enum apdu_tag_t
 {
-	apdu_tag_aa_request                  = 0x60,
-	apdu_tag_aa_response                 = 0x61,
+	apdu_tag_aarq                        = 0x60,
+	apdu_tag_aare                        = 0x61,
 	apdu_tag_get_request                 = 0xC0,
 	apdu_tag_set_request                 = 0xC1,
 	apdu_tag_event_notification_request  = 0xC2,
@@ -297,35 +297,6 @@ enum data_access_result_t
 	access_result_other_reason                = 250,
 };
 
-struct get_request_normal_t
-{
-	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
-};
-
-enum get_request_type_t
-{
-	get_request_normal_type = 1,
-	get_request_next_type = 2,
-	get_request_with_list_type = 3,
-};
-
-enum action_request_type_t
-{
-	action_request_normal_type                = 1,
-	action_request_next_pblock                = 2,
-	action_request_with_list                  = 3,
-	action_request_with_first_pblock          = 4,
-	action_request_with_list_and_first_pblock = 5,
-	action_request_with_pblock                = 6,
-};
-
-struct action_request_normal_t
-{
-	struct cosem_method_descriptor_t  cosem_method_descriptor;
-	const unsigned char *data;
-	unsigned int length;
-};
-
 enum action_result_t
 {
 	action_result_success                     = 0,
@@ -341,6 +312,123 @@ enum action_result_t
 	action_result_long_action_aborted         = 15,
 	action_result_no_long_action_in_progress  = 16,
 	action_result_other_reason                = 250
+};
+
+enum get_request_type_t
+{
+	get_request_normal_type = 1,
+	get_request_next_type = 2,
+	get_request_with_list_type = 3,
+};
+
+enum get_response_type_t
+{
+	get_response_normal_type = 1,
+	get_response_with_datablock = 2,
+	get_response_with_list = 3,
+};
+
+enum set_request_type_t
+{
+	set_request_normal                        = 1,
+	set_request_with_first_datablock          = 2,
+	set_request_with_datablock                = 3,
+	set_request_with_list                     = 4,
+	set_request_with_list_and_first_datablock = 5,
+};
+
+enum action_request_type_t
+{
+	action_request_normal_type                = 1,
+	action_request_next_pblock                = 2,
+	action_request_with_list                  = 3,
+	action_request_with_first_pblock          = 4,
+	action_request_with_list_and_first_pblock = 5,
+	action_request_with_pblock                = 6,
+};
+
+enum action_response_type_t
+{
+	action_response_normal_type               = 1,
+	action_response_with_pblock               = 2,
+	action_response_with_list                 = 3,
+	action_response_next_pblock               = 4,
+};
+
+struct get_request_normal_t
+{
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
+};
+
+struct get_request_t
+{
+	enum get_request_type_t type;
+	union {
+		struct get_request_normal_t get_request_normal;
+	};
+};
+
+struct get_response_normal_t
+{
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	enum data_access_result_t       result;
+};
+
+struct get_response_t
+{
+	enum get_response_type_t type;
+	union {
+		struct get_response_normal_t get_response_normal;
+	};
+};
+
+struct set_request_normal_t
+{
+	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
+};
+
+struct set_response_normal_t
+{
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	enum data_access_result_t data_access_result;
+};
+
+struct set_request_t
+{
+	enum set_request_type_t type;
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	union {
+		struct set_request_normal_t set_request_normal;
+	};
+};
+
+struct action_request_normal_t
+{
+	struct invoke_id_and_priority_t  invoke_id_and_priority;
+	struct cosem_method_descriptor_t cosem_method_descriptor;
+};
+
+struct action_response_normal_t
+{
+	struct invoke_id_and_priority_t  invoke_id_and_priority;
+	enum action_result_t             result;
+};
+
+struct action_request_t
+{
+	enum action_request_type_t type;
+	union {
+		struct action_request_normal_t action_request_normal;
+	};
+};
+
+struct action_response_t
+{
+	enum action_response_type_t type;
+	union {
+		struct action_response_normal_t action_response_normal;
+	};
 };
 
 struct aarq_t
@@ -359,7 +447,7 @@ struct aarq_t
 	unsigned short                    protocol_version;
 	unsigned short                    acse_requirements;
 
-	struct hdlc_address_t             client_address;
+	enum spodes_access_level_t        spodes_access_level;
 };
 
 union association_information_t
@@ -381,7 +469,7 @@ struct aare_t
 	enum association_result_t         association_result;              // A2
 	enum acse_service_user_t          acse_service_user;               // A3
 	enum acse_service_provider_t      acse_service_provider;           // A3
-	struct acse_requirements_t        acse_requirements;               // 88
+	unsigned short                    acse_requirements;               // 88
 	enum mechanism_name_t             mechanism_name;                  // 89
 	struct authentication_value_t     responding_authentication_value; // AA
 	union association_information_t   user_information;                // BE

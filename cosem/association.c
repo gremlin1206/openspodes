@@ -27,11 +27,11 @@ SOFTWARE.
 
 #include <crypto/aes.h>
 
-#include "association.h"
-#include "pdu.h"
-#include "cosem.h"
+#include <cosem/association.h>
+#include <cosem/pdu.h>
+#include <cosem/cosem.h>
 
-#include "class_association_ln.h"
+#include <dlms/class_association_ln.h>
 
 static void cosem_reject_association_user(struct aare_t *aare, enum acse_service_user_t service_user)
 {
@@ -94,7 +94,7 @@ static int cosem_high_level_security_authentication_stage1(struct cosem_ctx_t *c
 	a->stoc_challenge.length = 16;
 
 	aare->has_acse_requirements = 1;
-	aare->acse_requirements.value = 0x0780;
+	aare->acse_requirements = 0x0780;
 
 	aare->has_mechanism_name = 1;
 	aare->mechanism_name = aarq->mechanism_name;
@@ -197,11 +197,7 @@ static int spodes_check_aarq(struct cosem_ctx_t *ctx, struct cosem_association_t
 		return -1;
 	}
 
-	spodes_access_level = spodes_client_address_to_access_level(&aarq->client_address);
-	if (spodes_access_level < 0) {
-		cosem_reject_association_user(aare, acse_service_user_no_reason_given);
-		return spodes_access_level;
-	}
+	spodes_access_level = aarq->spodes_access_level;
 
 	if (spodes_access_level >= spodes_access_level_reader) {
 		if (!aarq->has_acse_requirements || aarq->acse_requirements != 0x0780) {
@@ -229,8 +225,6 @@ static int spodes_check_aarq(struct cosem_ctx_t *ctx, struct cosem_association_t
 			return -1;
 		}
 	}
-
-	a->spodes_access_level = spodes_access_level;
 
 	return 0;
 }
@@ -308,13 +302,14 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 	initiate_response->negotiated_conformance.get = 1;
 	initiate_response->negotiated_conformance.block_transfer_with_get_or_read = 1;
 
-	initiate_response->server_max_receive_pdu_size = DLMS_MAX_PDU_SIZE;
+	initiate_response->server_max_receive_pdu_size = 1024; // TODO: take it from context
 
-	a->associated = 1;
-	a->mechanism_name = aarq->mechanism_name;
+	a->mechanism_name         = aarq->mechanism_name;
 	a->calling_authentication = aarq->calling_authentication;
 	a->negotiated_conformance = initiate_response->negotiated_conformance;
+	a->spodes_access_level    = aarq->spodes_access_level;
 
+	a->associated = 1;
 	printf("cosem_association_open: associated\n");
 
 	return 0;

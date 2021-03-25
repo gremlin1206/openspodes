@@ -1,0 +1,220 @@
+/*
+MIT License
+
+Copyright (c) 2021 gremlin1206
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+#include <stdio.h>
+
+#include "objects.h"
+#include "association.h"
+
+static struct cosem_object_t *cosem_find_abstract_object(struct cosem_longname_t name)
+{
+	switch (name.C)
+	{
+	case 40: // Instances of IC “Association SN/LN”
+		return cosem_association_get_object(name);
+
+	default:
+		return 0;
+	}
+}
+
+struct cosem_object_t *cosem_find_object_by_name(struct cosem_ctx_t *ctx, struct cosem_longname_t name)
+{
+	if (name.A == 0)
+		return cosem_find_abstract_object(name);
+	else
+		return 0; //return cosem_find_energy_object(name);
+}
+
+static int cosem_encode_logical_name(struct cosem_longname_t longname, struct cosem_pdu_t *output)
+{
+	unsigned char *p;
+
+	p = cosem_pdu_put_cosem_data(output, 8);
+	if (!p)
+		return -1;
+
+	p[0] = 0x09;
+	p[1] = 0x06;
+
+	p[2] = longname.A;
+	p[3] = 0;
+	p[4] = longname.C;
+	p[5] = longname.D;
+	p[6] = longname.E;
+	p[7] = longname.F;
+
+	return 8;
+}
+
+static int cosem_object_get_request_normal(struct cosem_ctx_t *ctx,
+		                           struct get_request_normal_t *get_request_normal, struct get_response_t *response,
+					   struct cosem_pdu_t *output)
+{
+	int ret;
+	const struct cosem_class_t *cosem_class;
+	struct cosem_object_t *object;
+
+	response->type = get_response_normal_type;
+
+	object = cosem_find_object_by_name(ctx, get_request_normal->cosem_attribute_descriptor.instance_id);
+	if (!object) {
+		printf("cosem_process_get_request: object not found\n");
+		response->get_response_normal.result = access_result_object_undefined;
+		return 0;
+	}
+
+	cosem_class = object->cosem_class;
+
+	if (get_request_normal->cosem_attribute_descriptor.class_id != cosem_class->class_id) {
+		printf("cosem_object_get_request: object class inconsistent\n");
+		response->get_response_normal.result = access_result_object_class_inconsistent;
+		return 0;
+	}
+
+	if (get_request_normal->cosem_attribute_descriptor.attribute_id == 1) {
+		ret = cosem_encode_logical_name(get_request_normal->cosem_attribute_descriptor.instance_id, output);
+		if (ret < 0)
+			return ret;
+
+		response->get_response_normal.result = access_result_success;
+
+		return 0;
+	}
+
+	if (cosem_class->get_normal == 0) {
+		printf("cosem_object_get_request: method get not implemented\n");
+		response->get_response_normal.result = access_result_other_reason;
+		return 0;
+	}
+
+	return cosem_class->get_normal(ctx, object, get_request_normal, response, output);
+}
+
+int cosem_object_get_request(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
+		               struct get_request_t *request, struct get_response_t *response,
+			       struct cosem_pdu_t *output)
+{
+	int ret;
+
+	switch (request->type)
+	{
+	case get_request_normal_type:
+		ret = cosem_object_get_request_normal(ctx, &request->get_request_normal, response, output);
+		break;
+
+	case get_request_next_type:
+		ret = -1;
+		break;
+
+	case get_request_with_list_type:
+		ret = -1;
+		break;
+
+	default:
+		ret = -1;
+		break;
+	}
+
+	return ret;
+}
+
+int cosem_object_set_attribute(struct cosem_ctx_t *ctx,
+		               struct set_request_t *request, struct cosem_pdu_t *pdu,
+			       struct cosem_pdu_t *output)
+{
+#if 0
+	const struct cosem_class_t *cosem_class = object->cosem_class;
+
+	printf("cosem_object_set_attribute\n");
+
+	if (request->set_request_normal.cosem_attribute_descriptor.class_id != cosem_class->class_id) {
+		printf("cosem_object_set_attribute: object class inconsistent\n");
+		return access_result_object_class_inconsistent;
+	}
+
+	if (cosem_class->set == 0) {
+		printf("cosem_object_set_attribute: method get not implemented\n");
+		return access_result_scope_of_access_violated;
+	}
+
+	return cosem_class->set(ctx, object, request, pdu, object);
+#endif
+
+	return 0;
+}
+
+static int cosem_object_action_request_normal(struct cosem_ctx_t *ctx,
+		                              struct action_request_normal_t *action_request_normal, struct action_response_t *response,
+					      struct cosem_pdu_t *pdu, struct cosem_pdu_t *output)
+{
+	int ret;
+	const struct cosem_class_t *cosem_class;
+	struct cosem_object_t *object;
+
+	response->type = action_response_normal_type;
+
+	object = cosem_find_object_by_name(ctx, action_request_normal->cosem_method_descriptor.instance_id);
+	if (!object) {
+		printf("cosem_process_get_request: object not found\n");
+		response->action_response_normal.result = action_result_object_undefined;
+		return 0;
+	}
+
+	cosem_class = object->cosem_class;
+
+	if (action_request_normal->cosem_method_descriptor.class_id != cosem_class->class_id) {
+		printf("cosem_object_get_request: object class inconsistent\n");
+		response->action_response_normal.result = action_result_object_class_inconsistent;
+		return 0;
+	}
+
+	if (cosem_class->action_normal == 0) {
+		printf("cosem_object_get_request: method get not implemented\n");
+		response->action_response_normal.result = action_result_other_reason;
+		return 0;
+	}
+
+	return cosem_class->action_normal(ctx, object, action_request_normal, response, pdu, output);
+}
+
+int cosem_object_action(struct cosem_ctx_t *ctx,
+	                struct action_request_t *request, struct action_response_t *response,
+			struct cosem_pdu_t *pdu, struct cosem_pdu_t *output)
+{
+	int ret;
+
+	switch (request->type)
+	{
+	case action_request_normal_type:
+		ret = cosem_object_action_request_normal(ctx, &request->action_request_normal, response, pdu, output);
+		break;
+
+	default:
+		ret = -1;
+		break;
+	}
+
+	return ret;
+}

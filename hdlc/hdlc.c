@@ -135,7 +135,7 @@ static int hdlc_send_rr_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *fr
 	return ret;
 }
 
-static int hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
+static int hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame, int retransmit)
 {
 	int ret;
 	struct hdlc_frame_t response;
@@ -161,17 +161,23 @@ static int hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *fra
 	response.dest_address = frame->src_address;
 	response.src_address  = ctx->hdlc_address;
 
-	if (ctx->pdu_output_offset >= ctx->pdu.length)
-		return -1;
+	if (!retransmit) {
+		length = ctx->output_pdu->length;
+		max_info_len = hdlc_frame_max_info_length(frame, ctx->out_bs.max_length);
 
-	length = ctx->pdu.length - ctx->pdu_output_offset;
-	data = (unsigned char*)ctx->pdu.data + ctx->pdu_output_offset;
+		if (length > max_info_len) {
+			PRINTF("set fragmented bit\n");
+			length = max_info_len;
+			response.format.S = 1;
+		}
 
-	max_info_len = hdlc_frame_max_info_length(frame, ctx->out_bs.max_length);
-	if (length > max_info_len) {
-		PRINTF("set fragmented bit\n");
-		length = max_info_len;
-		response.format.S = 1;
+		data = cosem_pdu_get_data(ctx->output_pdu, length);
+		ctx->last_sent_length = length;
+		ctx->last_sent_data = data;
+	}
+	else {
+		length = ctx->last_sent_length;
+		data = ctx->last_sent_data;
 	}
 
 	response.info = data;
@@ -182,8 +188,6 @@ static int hdlc_send_i_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *fra
 		return ret;
 
 	ctx->sendfn(ctx, ctx->out_bs.frame, ctx->out_bs.length);
-
-	ctx->last_sent_length = length;
 
 	return 0;
 }
@@ -223,7 +227,9 @@ static void hdlc_disconnect(struct hdlc_ctx_t *ctx)
 
 	hdlc_bs_reset(&ctx->in_bs);
 	hdlc_bs_reset(&ctx->out_bs);
-	cosem_pdu_reset(&ctx->pdu);
+
+	cosem_pdu_reset(ctx->input_pdu);
+	cosem_pdu_reset(ctx->output_pdu);
 
 	ctx->nr = ctx->ns = 0;
 
@@ -261,7 +267,6 @@ static int hdlc_cmd_snrm(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 
 static int hdlc_cmd_rr(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 {
-	unsigned int pdu_length;
 	PRINTF("RR command received\n");
 
 	if (ctx->state == HDLC_STATE_NDM) {
@@ -269,17 +274,13 @@ static int hdlc_cmd_rr(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 		return HDLC_OK;
 	}
 
-	pdu_length = ctx->pdu.length;
-
 	if (ctx->ns != frame->control.nr) {
 		hdlc_send_frmr_response(ctx, frame);
 		return HDLC_OK;
 	}
 
-	ctx->pdu_output_offset += ctx->last_sent_length;
-
-	if (pdu_length > 0 && ctx->pdu_output_offset < pdu_length) {
-		hdlc_send_i_response(ctx, frame);
+	if (ctx->output_pdu->length > 0) {
+		hdlc_send_i_response(ctx, frame, 0);
 		ctx->ns = (ctx->ns + 1) & 0x7;
 	}
 	else
@@ -288,15 +289,10 @@ static int hdlc_cmd_rr(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 	return HDLC_OK;
 }
 
-static int llc_input(struct hdlc_ctx_t *ctx, struct cosem_pdu_t *pdu)
+static int llc_input(struct hdlc_ctx_t *ctx, enum spodes_access_level_t access_level, struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu)
 {
 	int ret;
 	unsigned char *llc_header;
-
-	if (pdu->length < LLC_HEADER_LENGTH) {
-		PRINTF("no LLC header\n");
-		return -1;
-	}
 
 #ifdef DLMS_HDLC_DEBUG
 	unsigned int i;
@@ -306,30 +302,35 @@ static int llc_input(struct hdlc_ctx_t *ctx, struct cosem_pdu_t *pdu)
 	printf("\n");
 #endif
 
-	llc_header = cosem_pdu_header(pdu);
+	llc_header = cosem_pdu_get_data(input_pdu, LLC_HEADER_LENGTH);
+	if (!llc_header)
+		return -1;
 
 	if (llc_header[0] != LLC_REMOTE_LSAP || llc_header[1] != LLC_LOCAL_LSAP_REQUEST) {
 		PRINTF("invalid LLC header\n");
 		return -1;
 	}
 
-	ret = dlms_input(ctx->dlms, pdu);
+	ret = dlms_input(ctx->dlms, access_level, input_pdu, output_pdu);
 	if (ret < 0)
 		return ret;
 
-	/*
-	 * Set response LLC header
-	 */
+	llc_header = cosem_pdu_put_data(output_pdu, LLC_HEADER_LENGTH);
+	if (!llc_header)
+		return -1;
+
+	llc_header[0] = LLC_REMOTE_LSAP;
 	llc_header[1] = LLC_LOCAL_LSAP_RESPONSE;
 	llc_header[2] = 0;
 
-	return ret;
+	return 0;
 }
 
 static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 {
 	int ret;
 	int fragmented;
+	unsigned char *p;
 
 	PRINTF("I command received\n");
 
@@ -357,38 +358,36 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 		/*
 		 * Drop the response if we received a new data
 		 */
-		cosem_pdu_reset(&ctx->pdu);
-		ctx->pdu_output_offset = 0;
+		cosem_pdu_reset(ctx->output_pdu);
 		ctx->last_sent_length = 0;
 	}
 
-	ret = cosem_pdu_append_buffer(&ctx->pdu, frame->info, frame->info_len);
-	if (ret < 0) {
+	p = cosem_pdu_put_data(ctx->input_pdu, frame->info_len);
+	if (!p) {
 		// TODO: add proper handling of PDU oversize
-		cosem_pdu_reset(&ctx->pdu);
+		cosem_pdu_reset(ctx->input_pdu);
 		return HDLC_OK;
 	}
+	memcpy(p, frame->info, frame->info_len);
 
 	if (fragmented) {
 		hdlc_send_rr_response(ctx, frame);
 		return HDLC_OK;
 	}
 
-	ctx->pdu_output_offset = 0;
-	ctx->last_sent_length = 0;
+	ret = spodes_client_address_to_access_level(&frame->src_address);
+	if (ret < 0)
+		return HDLC_OK;
 
-	ctx->pdu.server_address = frame->dest_address;
-	ctx->pdu.client_address = frame->src_address;
-
-	ret = llc_input(ctx, &ctx->pdu);
+	ret = llc_input(ctx, (enum spodes_access_level_t)ret, ctx->input_pdu, ctx->output_pdu);
 	if (ret < 0) {
 		PRINTF("dlms handling error\n");
-		cosem_pdu_reset(&ctx->pdu);
+		cosem_pdu_reset(ctx->input_pdu);
 		hdlc_send_rr_response(ctx, frame);
 		return HDLC_OK;
 	}
 
-	hdlc_send_i_response(ctx, frame);
+	hdlc_send_i_response(ctx, frame, 0);
 	ctx->ns = (ctx->ns + 1) & 0x7;
 
 	return HDLC_OK;
@@ -512,7 +511,7 @@ int hdlc_receive(struct hdlc_ctx_t *ctx, uint8_t *bytes, uint32_t length)
 	return 0;
 }
 
-int hdlc_init(struct hdlc_ctx_t *ctx)
+int hdlc_init(struct hdlc_ctx_t *ctx, struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu)
 {
 	memset(ctx, 0, sizeof(*ctx));
 
@@ -523,7 +522,8 @@ int hdlc_init(struct hdlc_ctx_t *ctx)
 
 	ctx->nr = ctx->ns = 0;
 
-	cosem_pdu_init(&ctx->pdu, LLC_HEADER_LENGTH);
+	ctx->input_pdu = input_pdu;
+	ctx->output_pdu = output_pdu;
 
 	return 0;
 }

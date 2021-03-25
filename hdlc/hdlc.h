@@ -64,14 +64,15 @@ struct hdlc_ctx_t
 
 	uint8_t in_buf[HDLC_BUFFER_SIZE];
 	uint8_t out_buf[HDLC_BUFFER_SIZE];
-
-	uint64_t last_receive_timestamp;
-
 	uint8_t nr;
 	uint8_t ns;
 
-	struct cosem_pdu_t pdu;
-	unsigned int pdu_output_offset;
+	uint64_t last_receive_timestamp;
+
+	struct cosem_pdu_t *input_pdu;
+	struct cosem_pdu_t *output_pdu;
+
+	unsigned char *last_sent_data;
 	unsigned int last_sent_length;
 
 	struct dlms_ctx_t *dlms;
@@ -81,7 +82,7 @@ struct hdlc_ctx_t
 extern "C" {
 #endif
 
-int hdlc_init(struct hdlc_ctx_t *ctx);
+int hdlc_init(struct hdlc_ctx_t *ctx, struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu);
 int hdlc_receive(struct hdlc_ctx_t *ctx, uint8_t *bytes, uint32_t length);
 
 #ifdef __cplusplus

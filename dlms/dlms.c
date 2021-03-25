@@ -22,10 +22,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef COSEM_CLASS_H_
-#define COSEM_CLASS_H_
+#include <stdio.h>
+#include <string.h>
 
-#include "types.h"
+#include "dlms.h"
 
+int dlms_init(struct dlms_ctx_t *ctx)
+{
+	int ret;
 
-#endif /* COSEM_CLASS_H_ */
+	ret = cosem_init(&ctx->cosem);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+void dlms_close_association(struct dlms_ctx_t *ctx)
+{
+	cosem_close_association(&ctx->cosem);
+}
+
+int dlms_input(struct dlms_ctx_t *ctx, enum spodes_access_level_t access_level,
+	       struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu)
+{
+	return cosem_input(&ctx->cosem, access_level, input_pdu, output_pdu);
+}

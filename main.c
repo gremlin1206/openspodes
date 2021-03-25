@@ -4,9 +4,22 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "dlms.h"
-
+#include <dlms/dlms.h>
 #include <crypto/aes.h>
+
+#ifdef  CONFIG_DLMS_MAX_PDU_SIZE
+#  define DLMS_MAX_PDU_SIZE CONFIG_DLMS_MAX_PDU_SIZE
+#else
+#  define DLMS_MAX_PDU_SIZE 1024
+#endif
+
+#ifdef  CONFIG_DLMS_MAX_PDU_HEADER_SIZE
+#  define DLMS_MAX_PDU_HEADER_SIZE CONFIG_DLMS_MAX_PDU_HEADER_SIZE
+#else
+#  define DLMS_MAX_PDU_HEADER_SIZE 16
+#endif
+
+static unsigned char dlms_buffer[DLMS_MAX_PDU_SIZE + DLMS_MAX_PDU_HEADER_SIZE];
 
 int fd;
 
@@ -114,6 +127,7 @@ int main(void)
 {
 	struct hdlc_ctx_t hdlc;
 	struct dlms_ctx_t dlms;
+	struct cosem_pdu_t input_pdu, output_pdu;
 	int ret;
 
 #if 0
@@ -155,7 +169,10 @@ int main(void)
 
 	dlms_init(&dlms);
 
-	hdlc_init(&hdlc);
+	cosem_pdu_init(&input_pdu,  DLMS_MAX_PDU_SIZE, 0,                dlms_buffer, sizeof(dlms_buffer));
+	cosem_pdu_init(&output_pdu, DLMS_MAX_PDU_SIZE, 1 /* reversed */, dlms_buffer, sizeof(dlms_buffer));
+
+	hdlc_init(&hdlc, &input_pdu, &output_pdu);
 	hdlc.dlms = &dlms;
 	hdlc.sendfn = sendfn;
 	hdlc.hdlc_address.len = 2;
