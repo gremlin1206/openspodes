@@ -25,34 +25,7 @@ SOFTWARE.
 #ifndef DLMS_VARIANT_H_
 #define DLMS_VARIANT_H_
 
-enum dlms_data_type_t
-{
-	dlms_null                 = 0,
-	dlms_boolean              = 3,
-	dlms_bit_string           = 4,
-	dlms_double_long          = 5,
-	dlms_double_long_unsigned = 6,
-	dlms_octet_string         = 9,
-	dlms_visible_string       = 10,
-	dlms_utf8_string          = 12,
-	dlms_bcd                  = 13,
-	dlms_integer              = 15,
-	dlms_long                 = 16,
-	dlms_unsigned             = 17,
-	dlms_long_unsigned        = 18,
-	dlms_long64               = 20,
-	dlms_long64_unsigned      = 21,
-	dlms_enum                 = 22,
-	dlms_float32              = 23,
-	dlms_float64              = 24,
-	dlms_date_time            = 25,
-	dlms_date                 = 26,
-	dlms_time                 = 27,
 
-	dlms_array                = 1,
-	dlms_structure            = 2,
-	dlms_compact_array        = 19,
-};
 
 typedef unsigned short dlms_long_unsigned_t;
 typedef unsigned char dlms_unsigned_t;

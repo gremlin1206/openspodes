@@ -31,6 +31,7 @@ struct cosem_class_t;
 
 struct cosem_object_t
 {
+	struct cosem_longname_t     logical_name;
 	const struct cosem_class_t *cosem_class;
 	void *data;
 };
@@ -51,7 +52,8 @@ typedef int (*coset_get_object_metadata_t)(struct cosem_object_t *obj, struct co
 
 struct cosem_class_t
 {
-	int class_id;
+	unsigned short class_id;
+	unsigned char  version;
 
 	cosem_get_normal_t      get_normal;
 	cosem_set_normal_t      set_normal;

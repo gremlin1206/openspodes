@@ -30,7 +30,7 @@ CC := gcc
 
 INCLUDES += -I$(CURDIR)
 
-CFLAGS := $(INCLUDES) -Wall -g -O0
+CFLAGS := $(INCLUDES) -Wall -Winline -g -O0
 LDFLAGS :=
 
 app: $(OBJS)

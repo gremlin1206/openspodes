@@ -43,10 +43,17 @@ static struct cosem_object_t *cosem_find_abstract_object(struct cosem_ctx_t *ctx
 
 static struct cosem_object_t *cosem_find_object_by_name(struct cosem_ctx_t *ctx, struct cosem_longname_t name)
 {
+	struct cosem_object_t *object;
+
 	if (name.A == 0)
-		return cosem_find_abstract_object(ctx, name);
+		object = cosem_find_abstract_object(ctx, name);
 	else
-		return 0; //return cosem_find_energy_object(name);
+		object = 0; //return cosem_find_energy_object(name);
+
+	if (object)
+		object->logical_name = name;
+
+	return object;
 }
 
 static int cosem_encode_logical_name(struct cosem_longname_t longname, struct cosem_pdu_t *output)

@@ -301,6 +301,7 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 	initiate_response->negotiated_conformance.selective_access = 1;
 	initiate_response->negotiated_conformance.set = 1;
 	initiate_response->negotiated_conformance.get = 1;
+	initiate_response->negotiated_conformance.action = 1;
 	initiate_response->negotiated_conformance.block_transfer_with_get_or_read = 1;
 
 	initiate_response->server_max_receive_pdu_size = 1024; // TODO: take it from context
