@@ -337,6 +337,15 @@ enum set_request_type_t
 	set_request_with_list_and_first_datablock = 5,
 };
 
+enum set_response_type_t
+{
+	set_response_normal                       = 1,
+	set_response_datablock                    = 2,
+	set_response_last_datablock               = 3,
+	set_response_last_datablock_with_list     = 4,
+	set_response_with_list                    = 5,
+};
+
 enum action_request_type_t
 {
 	action_request_normal_type                = 1,
@@ -385,21 +394,29 @@ struct get_response_t
 
 struct set_request_normal_t
 {
+	struct invoke_id_and_priority_t invoke_id_and_priority;
 	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
 };
 
 struct set_response_normal_t
 {
 	struct invoke_id_and_priority_t invoke_id_and_priority;
-	enum data_access_result_t data_access_result;
+	enum data_access_result_t       result;
 };
 
 struct set_request_t
 {
 	enum set_request_type_t type;
-	struct invoke_id_and_priority_t invoke_id_and_priority;
 	union {
 		struct set_request_normal_t set_request_normal;
+	};
+};
+
+struct set_response_t
+{
+	enum set_response_type_t type;
+	union {
+		struct set_response_normal_t set_response_normal;
 	};
 };
 

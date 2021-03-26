@@ -39,11 +39,9 @@ typedef int (*cosem_get_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t
                                   struct get_request_normal_t *get_request_normal, struct get_response_t *response,
 		                  struct cosem_pdu_t *output);
 
-/*
-typedef int (*cosem_set_attribute_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
-		                     struct set_request_t *request, struct cosem_pdu_t *pdu,
-				     struct cosem_pdu_t *output);
-*/
+typedef int (*cosem_set_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
+		                  struct set_request_normal_t *set_request_normal, struct set_response_t *response,
+				  struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
 
 typedef int (*cosem_action_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
                                      struct action_request_normal_t *request, struct action_response_t *response,
@@ -56,19 +54,19 @@ struct cosem_class_t
 	int class_id;
 
 	cosem_get_normal_t      get_normal;
-//	cosem_set_attribute_t   set_normal;
+	cosem_set_normal_t      set_normal;
 	cosem_action_normal_t   action_normal;
 
 	coset_get_object_metadata_t get_metadata;
 };
 
 int cosem_object_get_request(struct cosem_ctx_t *ctx,
-	                       struct get_request_t *request, struct get_response_t *response,
-		               struct cosem_pdu_t *output);
+	                     struct get_request_t *request, struct get_response_t *response,
+		             struct cosem_pdu_t *output);
 
-int cosem_object_set_attribute(struct cosem_ctx_t *ctx,
-	                       struct set_request_t *request, struct cosem_pdu_t *pdu,
-		               struct cosem_pdu_t *output);
+int cosem_object_set_request(struct cosem_ctx_t *ctx,
+	                     struct set_request_t *request, struct set_response_t *response,
+			     struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
 
 int cosem_object_action(struct cosem_ctx_t *ctx,
                         struct action_request_t *request, struct action_response_t *response,

@@ -120,6 +120,11 @@ int cosem_object_get_request(struct cosem_ctx_t *ctx,
 {
 	int ret;
 
+	if (!ctx->association.authenticated) {
+		printf("not authenticated\n");
+		return -1;
+	}
+
 	switch (request->type)
 	{
 	case get_request_normal_type:
@@ -142,29 +147,57 @@ int cosem_object_get_request(struct cosem_ctx_t *ctx,
 	return ret;
 }
 
-int cosem_object_set_attribute(struct cosem_ctx_t *ctx,
-		               struct set_request_t *request, struct cosem_pdu_t *pdu,
-			       struct cosem_pdu_t *output)
+static int cosem_object_set_request_normal(struct cosem_ctx_t *ctx,
+		                           struct set_request_normal_t *set_request_normal, struct set_response_t *response,
+					   struct cosem_pdu_t *pdu, struct cosem_pdu_t *output)
 {
-#if 0
-	const struct cosem_class_t *cosem_class = object->cosem_class;
+	const struct cosem_class_t *cosem_class;
+	struct cosem_object_t *object;
 
-	printf("cosem_object_set_attribute\n");
+	response->type = set_response_normal;
 
-	if (request->set_request_normal.cosem_attribute_descriptor.class_id != cosem_class->class_id) {
-		printf("cosem_object_set_attribute: object class inconsistent\n");
-		return access_result_object_class_inconsistent;
+	object = cosem_find_object_by_name(ctx, set_request_normal->cosem_attribute_descriptor.instance_id);
+	if (!object) {
+		printf("cosem_process_get_request: object not found\n");
+		response->set_response_normal.result = access_result_object_undefined;
+		return 0;
 	}
 
-	if (cosem_class->set == 0) {
-		printf("cosem_object_set_attribute: method get not implemented\n");
-		return access_result_scope_of_access_violated;
+	cosem_class = object->cosem_class;
+
+	if (set_request_normal->cosem_attribute_descriptor.class_id != cosem_class->class_id) {
+		printf("cosem_object_get_request: object class inconsistent\n");
+		response->set_response_normal.result = access_result_object_class_inconsistent;
+		return 0;
 	}
 
-	return cosem_class->set(ctx, object, request, pdu, object);
-#endif
+	if (cosem_class->set_normal == 0) {
+		printf("cosem_object_get_request: method get not implemented\n");
+		response->set_response_normal.result = access_result_other_reason;
+		return 0;
+	}
 
-	return 0;
+	return cosem_class->set_normal(ctx, object, set_request_normal, response, pdu, output);
+}
+
+int cosem_object_set_request(struct cosem_ctx_t *ctx,
+                             struct set_request_t *request, struct set_response_t *response,
+		             struct cosem_pdu_t *pdu, struct cosem_pdu_t *output)
+{
+	int ret;
+
+	switch (request->type)
+	{
+	case set_request_normal:
+		ret = cosem_object_set_request_normal(ctx, &request->set_request_normal, response, pdu, output);
+		break;
+
+	default:
+		ret = -1;
+		break;
+	}
+
+	return ret;
 }
 
 static int cosem_object_action_request_normal(struct cosem_ctx_t *ctx,

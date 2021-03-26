@@ -38,6 +38,7 @@ static int get_object_list(
 		struct cosem_pdu_t *output
 		)
 {
+	printf("!!! get object list !!!\n");
 	return 0;
 }
 
