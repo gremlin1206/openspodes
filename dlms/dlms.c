@@ -25,7 +25,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 
-#include "dlms.h"
+#include <dlms/dlms.h>
 
 int dlms_init(struct dlms_ctx_t *ctx)
 {

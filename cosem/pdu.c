@@ -28,7 +28,7 @@ SOFTWARE.
 
 static unsigned char* cosem_pdu_put_(struct cosem_pdu_t *pdu, unsigned int length, unsigned int limit)
 {
-	unsigned char *p;
+	unsigned char *head;
 	int reversed = pdu->reversed;
 	unsigned int pdu_length = pdu->length;
 	unsigned int new_pdu_length = pdu_length + length;
@@ -36,19 +36,19 @@ static unsigned char* cosem_pdu_put_(struct cosem_pdu_t *pdu, unsigned int lengt
 	if (new_pdu_length > limit)
 		return 0;
 
-	p = pdu->head;
+	head = pdu->head;
 
 	if (reversed) {
-		p -= length;
-		pdu->head = p;
+		head -= length;
+		pdu->head = head;
 	}
 	else {
-		pdu->head = p + length;
+		pdu->head = head + length;
 	}
 
 	pdu->length = new_pdu_length;
 
-	return p;
+	return head;
 }
 
 void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int length_limit, int reversed,
@@ -59,7 +59,13 @@ void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int length_limit, int reve
 	pdu->length_limit = length_limit;
 	pdu->reversed     = reversed;
 
+	cosem_pdu_clear(pdu);
+}
+
+void cosem_pdu_clear(struct cosem_pdu_t *pdu)
+{
 	cosem_pdu_reset(pdu);
+	pdu->length = 0;
 }
 
 void cosem_pdu_reset(struct cosem_pdu_t *pdu)
@@ -68,7 +74,7 @@ void cosem_pdu_reset(struct cosem_pdu_t *pdu)
 		pdu->head = pdu->data + pdu->max_length;
 	else
 		pdu->head = pdu->data;
-	pdu->length = 0;
+
 }
 
 unsigned char* cosem_pdu_put_cosem_data(struct cosem_pdu_t *pdu, unsigned int length)
@@ -81,15 +87,19 @@ unsigned char* cosem_pdu_put_data(struct cosem_pdu_t *pdu, unsigned int length)
 	return cosem_pdu_put_(pdu, length, pdu->max_length);
 }
 
-unsigned char* cosem_pdu_get_data(struct cosem_pdu_t *pdu, void *buffer, unsigned int length)
+unsigned char* cosem_pdu_get_data(struct cosem_pdu_t *pdu, unsigned int length)
 {
-	if (length > pdu->length)
-		return -1;
+	unsigned char *head;
 
-	pdu->head += length;
+	if (length > pdu->length)
+		return 0;
+
+	head = pdu->head;
+
+	pdu->head = head + length;
 	pdu->length -= length;
 
-	return pdu->head;
+	return head;
 }
 
 int cosem_pdu_get_byte(struct cosem_pdu_t *pdu)

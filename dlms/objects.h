@@ -25,8 +25,7 @@ SOFTWARE.
 #ifndef COSEM_OBJECTS_H_
 #define COSEM_OBJECTS_H_
 
-#include <cosem/types.h>
-#include <cosem/pdu.h>
+#include <cosem/cosem.h>
 
 struct cosem_class_t;
 
@@ -36,7 +35,7 @@ struct cosem_object_t
 	void *data;
 };
 
-typedef int (*cosem_get_normal_t)(struct cosem_ctx_t *ctx,
+typedef int (*cosem_get_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
                                   struct get_request_normal_t *get_request_normal, struct get_response_t *response,
 		                  struct cosem_pdu_t *output);
 
@@ -63,8 +62,6 @@ struct cosem_class_t
 	coset_get_object_metadata_t get_metadata;
 };
 
-struct cosem_object_t *cosem_find_object_by_name(struct cosem_longname_t name);
-
 int cosem_object_get_request(struct cosem_ctx_t *ctx,
 	                       struct get_request_t *request, struct get_response_t *response,
 		               struct cosem_pdu_t *output);
@@ -74,7 +71,7 @@ int cosem_object_set_attribute(struct cosem_ctx_t *ctx,
 		               struct cosem_pdu_t *output);
 
 int cosem_object_action(struct cosem_ctx_t *ctx,
-                        struct action_request_t *request, struct cosem_pdu_t *pdu,
-	                struct cosem_pdu_t *output);
+                        struct action_request_t *request, struct action_response_t *response,
+			struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
 
 #endif /* COSEM_OBJECTS_H_ */

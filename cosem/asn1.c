@@ -74,12 +74,16 @@ int asn_get_length(unsigned int *out, struct cosem_pdu_t *pdu)
 	if (result > pdu->length)
 		return -1;
 
+	*out = result;
+
 	return bytes;
 }
 
 int asn_put_length(unsigned int length, struct cosem_pdu_t *pdu)
 {
 	int ret;
+
+	printf("asn_put_length %u\n", length);
 
 	if (length < 128) {
 		return asn_put_uint8((unsigned char)length, pdu);
@@ -210,15 +214,21 @@ int asn_get_tagged_data(struct asn1_tagged_data_t *out, struct cosem_pdu_t *pdu)
 	unsigned int length;
 	unsigned int bytes;
 
+	printf("asn_get_tagged_data 1\n");
+
 	ret = asn_get_uint8(&out->tag, pdu);
 	if (ret < 0)
 		return ret;
+
+	printf("tag: %02X\n", out->tag);
 
 	bytes = 1;
 
 	ret = asn_get_length(&length, pdu);
 	if (ret < 0)
 		return ret;
+
+	printf("length: %u\n", length);
 
 	bytes += (unsigned int)ret;
 	bytes += length;
@@ -228,6 +238,24 @@ int asn_get_tagged_data(struct asn1_tagged_data_t *out, struct cosem_pdu_t *pdu)
 		return ret;
 
 	return (int)bytes;
+}
+
+int asn_get_octet_string(unsigned char **string, unsigned int *length, struct cosem_pdu_t *pdu)
+{
+	int ret;
+	struct asn1_tagged_data_t octet_string;
+
+	ret = asn_get_tagged_data(&octet_string, pdu);
+	if (ret < 0)
+		return ret;
+
+	if (octet_string.tag != 0x09)
+		return -1;
+
+	*string = octet_string.pdu.head;
+	*length = octet_string.pdu.length;
+
+	return ret;
 }
 
 int asn_put_tagged_data(unsigned char tag, unsigned int length, struct cosem_pdu_t *pdu)
@@ -242,6 +270,29 @@ int asn_put_tagged_data(unsigned char tag, unsigned int length, struct cosem_pdu
 	bytes += ret;
 
 	ret = asn_put_uint8(tag, pdu);
+	if (ret < 0)
+		return ret;
+
+	bytes += ret;
+
+	return bytes;
+}
+
+int asn_put_octet_string(unsigned char *string, unsigned int length, struct cosem_pdu_t *pdu)
+{
+	int ret;
+	unsigned char *p;
+	int bytes;
+
+	p = cosem_pdu_put_cosem_data(pdu, length);
+	if (!p)
+		return -1;
+
+	memcpy(p, string, length);
+
+	bytes = (int)length;
+
+	ret = asn_put_tagged_data(0x09, length, pdu);
 	if (ret < 0)
 		return ret;
 

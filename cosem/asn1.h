@@ -40,6 +40,7 @@ int asn_get_uint16(unsigned short *out, struct cosem_pdu_t *pdu);
 int asn_get_uint8(unsigned char *out, struct cosem_pdu_t *pdu);
 
 int asn_get_tagged_data(struct asn1_tagged_data_t *out, struct cosem_pdu_t *pdu);
+int asn_get_octet_string(unsigned char **string, unsigned int *length, struct cosem_pdu_t *pdu);
 
 
 int asn_put_length(unsigned int length, struct cosem_pdu_t *pdu);
@@ -49,5 +50,7 @@ int asn_put_uint16(unsigned short value, struct cosem_pdu_t *pdu);
 int asn_put_uint32(unsigned int value, struct cosem_pdu_t *pdu);
 
 int asn_put_tagged_data(unsigned char tag, unsigned int length, struct cosem_pdu_t *pdu);
+int asn_put_octet_string(unsigned char *string, unsigned int length, struct cosem_pdu_t *pdu);
+
 
 #endif /* COSEM_ASN1_H_ */

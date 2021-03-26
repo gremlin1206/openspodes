@@ -27,11 +27,10 @@ SOFTWARE.
 #include <string.h>
 #include <time.h>
 
-#include <dlms.h>
+#include <dlms/dlms.h>
+#include <hdlc/hdlc.h>
 
-#include "hdlc.h"
-
-//#define DLMS_HDLC_DEBUG 1
+#define DLMS_HDLC_DEBUG 1
 
 #ifdef DLMS_HDLC_DEBUG
 #  define PRINTF printf
@@ -45,7 +44,7 @@ SOFTWARE.
 #define LLC_HEADER_LENGTH          3
 
 #define HDLC_BYTE_TIMEOUT_MS       500
-#define HDLC_INACTIVITY_TIMEOUT_MS 6000
+#define HDLC_INACTIVITY_TIMEOUT_MS 5500
 
 static int hdlc_send_dm_response(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 {
@@ -228,8 +227,8 @@ static void hdlc_disconnect(struct hdlc_ctx_t *ctx)
 	hdlc_bs_reset(&ctx->in_bs);
 	hdlc_bs_reset(&ctx->out_bs);
 
-	cosem_pdu_reset(ctx->input_pdu);
-	cosem_pdu_reset(ctx->output_pdu);
+	cosem_pdu_clear(ctx->input_pdu);
+	cosem_pdu_clear(ctx->output_pdu);
 
 	ctx->nr = ctx->ns = 0;
 
@@ -296,11 +295,13 @@ static int llc_input(struct hdlc_ctx_t *ctx, enum spodes_access_level_t access_l
 
 #ifdef DLMS_HDLC_DEBUG
 	unsigned int i;
-	for (i = 0; i < pdu->length; i++) {
-		printf("%02X ", pdu->data[i]);
+	for (i = 0; i < input_pdu->length; i++) {
+		printf("%02X ", input_pdu->head[i]);
 	}
 	printf("\n");
 #endif
+
+	printf("llc_input\n");
 
 	llc_header = cosem_pdu_get_data(input_pdu, LLC_HEADER_LENGTH);
 	if (!llc_header)
@@ -358,14 +359,21 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 		/*
 		 * Drop the response if we received a new data
 		 */
-		cosem_pdu_reset(ctx->output_pdu);
+		cosem_pdu_clear(ctx->output_pdu);
 		ctx->last_sent_length = 0;
 	}
+
+	printf("put data to pdu\n");
+	int i;
+	for (i = 0; i < frame->info_len; i++) {
+		printf("%02X ", frame->info[i]);
+	}
+	printf("\n");
 
 	p = cosem_pdu_put_data(ctx->input_pdu, frame->info_len);
 	if (!p) {
 		// TODO: add proper handling of PDU oversize
-		cosem_pdu_reset(ctx->input_pdu);
+		cosem_pdu_clear(ctx->input_pdu);
 		return HDLC_OK;
 	}
 	memcpy(p, frame->info, frame->info_len);
@@ -375,14 +383,25 @@ static int hdlc_cmd_i(struct hdlc_ctx_t *ctx, struct hdlc_frame_t *frame)
 		return HDLC_OK;
 	}
 
+	printf("check src address\n");
+
 	ret = spodes_client_address_to_access_level(&frame->src_address);
-	if (ret < 0)
+	if (ret < 0) {
+		cosem_pdu_clear(ctx->input_pdu);
+		cosem_pdu_clear(ctx->output_pdu);
 		return HDLC_OK;
+	}
+
+	cosem_pdu_clear(ctx->output_pdu);
+	cosem_pdu_reset(ctx->input_pdu);
 
 	ret = llc_input(ctx, (enum spodes_access_level_t)ret, ctx->input_pdu, ctx->output_pdu);
+
+	cosem_pdu_clear(ctx->input_pdu);
+
 	if (ret < 0) {
 		PRINTF("dlms handling error\n");
-		cosem_pdu_reset(ctx->input_pdu);
+		cosem_pdu_clear(ctx->output_pdu);
 		hdlc_send_rr_response(ctx, frame);
 		return HDLC_OK;
 	}

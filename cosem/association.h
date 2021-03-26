@@ -50,6 +50,6 @@ int cosem_association_high_level_security_authentication_stage2(struct cosem_ctx
 
 int cosem_check_access(struct cosem_ctx_t *ctx, struct cosem_association_t *a);
 
-struct cosem_object_t *cosem_association_get_object(struct cosem_longname_t name);
+struct cosem_object_t *cosem_association_get_object(struct cosem_ctx_t *ctx, struct cosem_longname_t name);
 
 #endif /* COSEM_ASSOCIATION_H_ */

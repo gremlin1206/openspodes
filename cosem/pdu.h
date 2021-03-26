@@ -41,6 +41,7 @@ struct cosem_pdu_t
 void cosem_pdu_init(struct cosem_pdu_t *pdu, unsigned int length_limit, int reversed,
 		    void *buffer, unsigned int length);
 
+void cosem_pdu_clear(struct cosem_pdu_t *pdu);
 void cosem_pdu_reset(struct cosem_pdu_t *pdu);
 
 unsigned char* cosem_pdu_put_cosem_data(struct cosem_pdu_t *pdu, unsigned int length);

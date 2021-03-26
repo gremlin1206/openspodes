@@ -33,9 +33,9 @@ static int cosem_encode_exception(enum cosem_state_error_t state_error, enum cos
 {
 	unsigned char *p;
 
-	cosem_pdu_reset(output);
+	cosem_pdu_clear(output);
 
-	p = cosem_pdu_put_cosem_data(output);
+	p = cosem_pdu_put_cosem_data(output, 3);
 	if (!p)
 		return -1;
 
@@ -68,7 +68,6 @@ static const unsigned char application_context_name_preamble[] = {
 
 static int cosem_decode_application_context_name(struct aarq_t *request, struct cosem_pdu_t *pdu)
 {
-	int ret;
 	unsigned char *p;
 
 	printf("dlms_decode_application_context_name\n");
@@ -173,6 +172,11 @@ static int cosem_encode_initiate_response(const struct initiate_response_t *resp
 	int ret;
 	int bytes;
 
+	printf("cosem_encode_initiate_response\n  vaa_name: %u\n  server_max_receive_pdu_size: %u\n",
+			response->vaa_name,
+			response->server_max_receive_pdu_size);
+
+
 	ret = asn_put_uint16(response->vaa_name, output);
 	if (ret < 0)
 		return ret;
@@ -221,7 +225,7 @@ static int cosem_encode_confirmed_service_error(const struct confirmed_service_e
 	return 4;
 }
 
-static int cosem_encode_aare_user_information(struct aare_t *aare, struct cosem_pdu_t *output)
+static int cosem_encode_aare_user_information(const struct aare_t *aare, struct cosem_pdu_t *output)
 {
 	int ret;
 
@@ -314,7 +318,6 @@ static int cosem_encode_mechanism_name(enum mechanism_name_t mn, struct cosem_pd
 static int cosem_decode_calling_authentication(struct aarq_t *request, struct cosem_pdu_t *pdu)
 {
 	int ret;
-	unsigned char tag;
 	unsigned int length;
 	struct asn1_tagged_data_t tagged_data;
 	unsigned char *p;
@@ -325,7 +328,7 @@ static int cosem_decode_calling_authentication(struct aarq_t *request, struct co
 	if (ret < 0)
 		return ret;
 
-	switch (tag)
+	switch (tagged_data.tag)
 	{
 	case 0x80:
 		break;
@@ -334,7 +337,7 @@ static int cosem_decode_calling_authentication(struct aarq_t *request, struct co
 		break;
 
 	default:
-		printf("unknown tag 0x%02X in calling authentication\n", tag);
+		printf("unknown tag 0x%02X in calling authentication\n", tagged_data.tag);
 		return -1;
 	}
 
@@ -467,6 +470,8 @@ static int cosem_decode_aarq_user_information(struct aarq_t *request, struct cos
 	unsigned char choice;
 	struct asn1_tagged_data_t tagged_data;
 
+	printf("cosem_decode_aarq_user_information\n");
+
 	ret = asn_get_tagged_data(&tagged_data, pdu);
 	if (ret < 0)
 		return ret;
@@ -490,28 +495,9 @@ static int cosem_decode_aarq_user_information(struct aarq_t *request, struct cos
 	return 0;
 }
 
-static int cosem_decode_unknown_pdu_tag(const unsigned char **buffer, unsigned int *length)
-{
-	int ret;
-	unsigned int block_length;
-
-	ret = asn_get_length(&block_length, buffer, length);
-	if (ret < 0)
-		return ret;
-
-	if (*length < block_length)
-		return -1;
-
-	*buffer += block_length;
-	*length -= block_length;
-
-	return 0;
-}
-
 static int cosem_decode_aarq(struct aarq_t *request, struct cosem_pdu_t *pdu)
 {
 	int ret;
-	unsigned char tag;
 	struct asn1_tagged_data_t aarq;
 	struct asn1_tagged_data_t field;
 
@@ -520,16 +506,22 @@ static int cosem_decode_aarq(struct aarq_t *request, struct cosem_pdu_t *pdu)
 	memset(request, 0, sizeof(*request));
 
 	ret = asn_get_tagged_data(&aarq, pdu);
-	if (ret < 0)
+	if (ret < 0) {
+		printf("cosem_decode_aarq: error 1\n");
 		return ret;
+	}
 
-	if (aarq.tag != apdu_tag_aarq)
+	if (aarq.tag != apdu_tag_aarq) {
+		printf("cosem_decode_aarq: error 2\n");
 		return -1;
+	}
 
 	while (aarq.pdu.length > 0) {
 		ret = asn_get_tagged_data(&field, &aarq.pdu);
-		if (ret < 0)
+		if (ret < 0) {
+			printf("cosem_decode_aarq: error 3\n");
 			return ret;
+		}
 
 		switch (field.tag)
 		{
@@ -559,7 +551,7 @@ static int cosem_decode_aarq(struct aarq_t *request, struct cosem_pdu_t *pdu)
 
 		default:
 			printf("unknown tag: 0x%02X\n", field.tag);
-			ret = cosem_decode_unknown_pdu_tag(&field.pdu);
+			ret = 0; //cosem_decode_unknown_pdu_tag(&field.pdu);
 			break;
 		}
 
@@ -568,6 +560,8 @@ static int cosem_decode_aarq(struct aarq_t *request, struct cosem_pdu_t *pdu)
 			return ret;
 		}
 	}
+
+	printf("AARQ OK\n");
 
 	return 0;
 }
@@ -627,21 +621,27 @@ static int cosem_encode_aare(const struct aare_t *aare, struct cosem_pdu_t *outp
 		bytes += ret;
 	}
 
+	printf("cosem_encode_aare bytes = %u\n", bytes);
+
 	return asn_put_tagged_data(0x61, bytes, output);
 }
 
-static int cosem_encode_aare_exception(unsigned char *buffer, enum acse_service_user_t service_user)
+static int cosem_encode_aare_exception(enum acse_service_user_t service_user, struct cosem_pdu_t *output)
 {
 	struct aare_t aare;
+
+	printf("cosem_encode_aare_exception\n");
 
 	memset(&aare, 0, sizeof(aare));
 
 	aare.application_context_name = application_context_long_names_clear_text;
 	aare.association_result = association_result_rejected_permanent;
+
+	aare.has_confirmed_service_error = 1;
 	aare.acse_service_user = service_user;
 	aare.acse_service_provider = acse_service_provider_no_error;
 
-	return cosem_encode_aare(buffer, &aare);
+	return cosem_encode_aare(&aare, output);
 }
 
 static int cosem_decode_attribute_descriptor(struct cosem_attribute_descriptor_t *attribute_descriptor, struct cosem_pdu_t *pdu)
@@ -649,13 +649,14 @@ static int cosem_decode_attribute_descriptor(struct cosem_attribute_descriptor_t
 	int ret;
 	struct cosem_longname_t instance_id;
 	const unsigned char *p;
-	unsigned char byte;
 
 	ret = asn_get_uint16(&attribute_descriptor->class_id, pdu);
 	if (ret < 0)
 		return ret;
 
 	p = cosem_pdu_get_data(pdu, 6);
+	if (!p)
+		return -1;
 
 	if (p[0] > 1)
 		return -1;
@@ -667,7 +668,7 @@ static int cosem_decode_attribute_descriptor(struct cosem_attribute_descriptor_t
 	instance_id.F = p[5];
 	attribute_descriptor->instance_id = instance_id;
 
-	ret = asn_get_uint8(&attribute_descriptor->attribute_id, pdu);
+	ret = asn_get_uint8((unsigned char*)&attribute_descriptor->attribute_id, pdu);
 	if (ret < 0)
 		return ret;
 
@@ -679,7 +680,7 @@ static int cosem_decode_attribute_descriptor(struct cosem_attribute_descriptor_t
 //   00 00 28 00 00 FF instance-id
 //   01 attribute-id
 //   00 access-selection (00 means not present)
-static int cosem_decode_get_request_normal(struct get_request_normal_t get_request_normal, struct cosem_pdu_t *pdu)
+static int cosem_decode_get_request_normal(struct get_request_normal_t *get_request_normal, struct cosem_pdu_t *pdu)
 {
 	int ret;
 
@@ -700,6 +701,7 @@ static int cosem_decode_get_request(struct get_request_t *request, struct cosem_
 {
 	int ret;
 	unsigned char tag;
+	unsigned char type;
 
 	printf("parce get request len: %u\n", pdu->length);
 
@@ -710,13 +712,15 @@ static int cosem_decode_get_request(struct get_request_t *request, struct cosem_
 	if (tag != apdu_tag_get_request)
 		return -1;
 
-	ret = asn_get_uint8(&request->type, pdu);
+	ret = asn_get_uint8(&type, pdu);
 	if (ret < 0)
 		return ret;
 
-	printf("  type: %i\n", request->type);
+	request->type = type;
 
-	switch (request->type)
+	printf("  type: %u\n", type);
+
+	switch (type)
 	{
 	case get_request_normal_type:
 		ret = cosem_decode_get_request_normal(&request->get_request_normal, pdu);
@@ -832,7 +836,7 @@ static int cosem_encode_data_result(enum data_access_result_t data_access_result
 		ret = asn_put_uint8(0x00, output);
 	}
 	else {
-		cosem_pdu_reset(output);
+		cosem_pdu_clear(output);
 
 		ret = asn_put_uint8(data_access_result, output);
 		if (ret < 0)
@@ -908,7 +912,6 @@ static int cosem_decode_method_descriptor(struct cosem_method_descriptor_t *meth
 	int ret;
 	struct cosem_longname_t instance_id;
 	const unsigned char *p;
-	unsigned char byte;
 
 	ret = asn_get_uint16(&method_descriptor->class_id, pdu);
 	if (ret < 0)
@@ -926,7 +929,7 @@ static int cosem_decode_method_descriptor(struct cosem_method_descriptor_t *meth
 	instance_id.F = p[5];
 	method_descriptor->instance_id = instance_id;
 
-	ret = asn_get_uint8(&method_descriptor->method_id, pdu);
+	ret = asn_get_uint8((unsigned char*)&method_descriptor->method_id, pdu);
 	if (ret < 0)
 		return ret;
 
@@ -936,7 +939,6 @@ static int cosem_decode_method_descriptor(struct cosem_method_descriptor_t *meth
 static int cosem_decode_action_request_normal(struct action_request_normal_t *action_request_normal, struct cosem_pdu_t *pdu)
 {
 	int ret;
-	unsigned char optional;
 
 	ret = asn_get_uint8(&action_request_normal->invoke_id_and_priority.byte, pdu);
 	if (ret < 0)
@@ -966,11 +968,8 @@ C3 tag
 static int cosem_decode_action_request(struct action_request_t *request, struct cosem_pdu_t *pdu)
 {
 	int ret;
-	unsigned short class_id;
-	struct cosem_longname_t instance_id;
 	unsigned char tag;
-	unsigned char optional;
-	unsigned int len;
+	unsigned char type;
 
 	printf("cosem_decode_action_request\n");
 
@@ -981,11 +980,13 @@ static int cosem_decode_action_request(struct action_request_t *request, struct 
 	if (tag != apdu_tag_action_request)
 		return -1;
 
-	ret = asn_get_uint8(&request->type, pdu);
+	ret = asn_get_uint8(&type, pdu);
 	if (ret < 0)
 		return ret;
 
-	switch (request->type)
+	request->type = type;
+
+	switch (type)
 	{
 	case action_request_normal_type:
 		ret = cosem_decode_action_request_normal(&request->action_request_normal, pdu);
@@ -1042,7 +1043,7 @@ static int cosem_encode_action_response(struct action_response_t *response, stru
 	if (ret < 0)
 		return ret;
 
-	ret = asn_put_uint8(apdu_tag_get_response, output);
+	ret = asn_put_uint8(apdu_tag_action_response, output);
 	if (ret < 0)
 		return ret;
 
@@ -1054,7 +1055,7 @@ static int cosem_encode_get_access_result(enum data_access_result_t data_access_
 {
 	unsigned char *p;
 
-	cosem_pdu_reset(output);
+	cosem_pdu_clear(output);
 
 	p = cosem_pdu_put_cosem_data(output, 5);
 	if (!p)
@@ -1109,15 +1110,17 @@ static int cosem_process_aarq(struct cosem_ctx_t *ctx, enum spodes_access_level_
 
 	ret = cosem_decode_aarq(&aarq, pdu);
 	if (ret < 0)
-		return cosem_encode_aare_exception(output, acse_service_user_no_reason_given);
+		return cosem_encode_aare_exception(acse_service_user_no_reason_given, output);
 
 	aarq.spodes_access_level = access_level;
 
 	ret = cosem_association_open(ctx, &ctx->association, &aarq, &aare);
 	if (ret < 0)
-		return cosem_encode_aare_exception(output, acse_service_user_no_reason_given);
+		return cosem_encode_aare_exception(acse_service_user_no_reason_given, output);
 
-	return cosem_encode_aare(output, &aare);
+	printf("cosem_process_aarq: vaa_name: %u\n", aare.user_information.initiate_response.vaa_name);
+
+	return cosem_encode_aare(&aare, output);
 }
 
 static int cosem_process_get_request(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level,
@@ -1125,7 +1128,7 @@ static int cosem_process_get_request(struct cosem_ctx_t *ctx, enum spodes_access
 {
 	int ret;
 	struct get_request_t request;
-	struct get_request_t response;
+	struct get_response_t response;
 	
 	printf("dlms_process_get_request\n");
 
@@ -1173,8 +1176,8 @@ static int dlms_process_set_request(struct cosem_ctx_t *ctx, struct cosem_pdu_t 
 }
 #endif
 
-static int cosem_process_action_request(struct cosem_ctx_t *ctx, struct cosem_pdu_t *pdu,
-		                       enum spodes_access_level_t access_level, struct cosem_pdu_t *output)
+static int cosem_process_action_request(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level,
+		                        struct cosem_pdu_t *pdu, struct cosem_pdu_t *output)
 {
 	int ret;
 	struct action_request_t request;
@@ -1209,13 +1212,13 @@ int cosem_input(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level
 		struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu)
 {
 	int ret;
-	unsigned int i;
 	unsigned char tag;
 
-#if 0
-	printf("process pdu (%u bytes):\n", len);
-	for (i = 0; i < len; i++)
-		printf("%02X ", buffer[i]);
+#if 1
+	unsigned int i;
+	printf("process pdu (%u bytes):\n", input_pdu->length);
+	for (i = 0; i < input_pdu->length; i++)
+		printf("%02X ", input_pdu->head[i]);
 	printf("\n");
 #endif
 
@@ -1227,21 +1230,21 @@ int cosem_input(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level
 	switch (tag)
 	{
 	case apdu_tag_aarq:
-		ret = cosem_process_aarq(ctx, access_level, pdu, output_pdu);
+		ret = cosem_process_aarq(ctx, access_level, input_pdu, output_pdu);
 		break;
 
 	case apdu_tag_get_request:
-		ret = cosem_process_get_request(ctx, access_level, pdu, output_pdu);
+		ret = cosem_process_get_request(ctx, access_level, input_pdu, output_pdu);
 		break;
 
 #if 0
 	case apdu_tag_set_request:
-		ret = dlms_process_set_request(ctx, access_level, pdu, output_pdu);
+		ret = dlms_process_set_request(ctx, access_level, input_pdu, output_pdu);
 		break;
 #endif
 
 	case apdu_tag_action_request:
-		ret = cosem_process_action_request(ctx, access_level, pdu, output_pdu);
+		ret = cosem_process_action_request(ctx, access_level, input_pdu, output_pdu);
 		break;
 
 	default:

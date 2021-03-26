@@ -30,6 +30,7 @@ SOFTWARE.
 #include <cosem/association.h>
 #include <cosem/pdu.h>
 #include <cosem/cosem.h>
+#include <cosem/asn1.h>
 
 #include <dlms/class_association_ln.h>
 
@@ -289,7 +290,7 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 
 	initiate_response->negotiated_dlms_version_number = 6;
 
-	initiate_response->vaa_name = 7;
+	//initiate_response->vaa_name = 7;
 
 	ret = cosem_authenticate_association(ctx, a, aarq, aare);
 	if (ret < 0) {
@@ -325,7 +326,7 @@ static struct cosem_association_ln_object_t cosem_object_current_association = {
 		.base = {. cosem_class = (struct cosem_class_t*)&class_association_ln },
 };
 
-struct cosem_object_t *cosem_association_get_object(struct cosem_longname_t name)
+struct cosem_object_t *cosem_association_get_object(struct cosem_ctx_t *ctx, struct cosem_longname_t name)
 {
 	if (name.D != 0 || name.F != 255)
 		return 0;
@@ -333,6 +334,7 @@ struct cosem_object_t *cosem_association_get_object(struct cosem_longname_t name
 	switch (name.E)
 	{
 	case 0: // current association
+		cosem_object_current_association.base.data = &ctx->association;
 		return (struct cosem_object_t*)&cosem_object_current_association;
 
 	case 1: // guest client access

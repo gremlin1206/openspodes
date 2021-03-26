@@ -24,25 +24,27 @@ SOFTWARE.
 
 #include <stdio.h>
 
-#include "objects.h"
-#include "association.h"
+#include <cosem/association.h>
+#include <cosem/asn1.h>
 
-static struct cosem_object_t *cosem_find_abstract_object(struct cosem_longname_t name)
+#include <dlms/objects.h>
+
+static struct cosem_object_t *cosem_find_abstract_object(struct cosem_ctx_t *ctx, struct cosem_longname_t name)
 {
 	switch (name.C)
 	{
 	case 40: // Instances of IC “Association SN/LN”
-		return cosem_association_get_object(name);
+		return cosem_association_get_object(ctx, name);
 
 	default:
 		return 0;
 	}
 }
 
-struct cosem_object_t *cosem_find_object_by_name(struct cosem_ctx_t *ctx, struct cosem_longname_t name)
+static struct cosem_object_t *cosem_find_object_by_name(struct cosem_ctx_t *ctx, struct cosem_longname_t name)
 {
 	if (name.A == 0)
-		return cosem_find_abstract_object(name);
+		return cosem_find_abstract_object(ctx, name);
 	else
 		return 0; //return cosem_find_energy_object(name);
 }
@@ -112,7 +114,7 @@ static int cosem_object_get_request_normal(struct cosem_ctx_t *ctx,
 	return cosem_class->get_normal(ctx, object, get_request_normal, response, output);
 }
 
-int cosem_object_get_request(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
+int cosem_object_get_request(struct cosem_ctx_t *ctx,
 		               struct get_request_t *request, struct get_response_t *response,
 			       struct cosem_pdu_t *output)
 {
@@ -172,6 +174,7 @@ static int cosem_object_action_request_normal(struct cosem_ctx_t *ctx,
 	int ret;
 	const struct cosem_class_t *cosem_class;
 	struct cosem_object_t *object;
+	unsigned char has_data;
 
 	response->type = action_response_normal_type;
 
@@ -196,7 +199,11 @@ static int cosem_object_action_request_normal(struct cosem_ctx_t *ctx,
 		return 0;
 	}
 
-	return cosem_class->action_normal(ctx, object, action_request_normal, response, pdu, output);
+	ret = asn_get_uint8(&has_data, pdu);
+	if (ret < 0)
+		return ret;
+
+	return cosem_class->action_normal(ctx, object, action_request_normal, response, has_data ? pdu : 0, output);
 }
 
 int cosem_object_action(struct cosem_ctx_t *ctx,
