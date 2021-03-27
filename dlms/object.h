@@ -22,26 +22,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef COSEM_SPODES_H_
-#define COSEM_SPODES_H_
+#ifndef DLMS_OBJECT_H_
+#define DLMS_OBJECT_H_
 
-struct hdlc_address_t;
+#include <cosem/cosem.h>
 
-enum spodes_access_level_t
+struct cosem_class_t;
+
+struct cosem_object_t
 {
-	spodes_access_level_public       = 0,
-	spodes_access_level_reader       = 1,
-	spodes_access_level_configurator = 2,
+	struct cosem_longname_t     logical_name;
+	const struct cosem_class_t *cosem_class;
+	void *data;
 };
 
-enum spodes_association_t
-{
-	spodes_association_current,
-	spodes_association_guest,
-	spodes_association_reader,
-	spodes_association_configurator,
-};
+int cosem_object_get_request(struct cosem_ctx_t *ctx,
+	                     struct get_request_t *request, struct get_response_t *response,
+		             struct cosem_pdu_t *output);
 
-int spodes_client_address_to_access_level(struct hdlc_address_t *address);
+int cosem_object_set_request(struct cosem_ctx_t *ctx,
+	                     struct set_request_t *request, struct set_response_t *response,
+			     struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
 
-#endif /* COSEM_SPODES_H_ */
+int cosem_object_action(struct cosem_ctx_t *ctx,
+                        struct action_request_t *request, struct action_response_t *response,
+			struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
+
+#endif /* DLMS_OBJECT_H_ */

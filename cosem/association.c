@@ -324,29 +324,20 @@ void cosem_association_close(struct cosem_ctx_t *ctx, struct cosem_association_t
 }
 
 static struct cosem_association_ln_object_t cosem_object_current_association = {
-		.base = {. cosem_class = (struct cosem_class_t*)&class_association_ln },
+		.base = {
+				.cosem_class  = (struct cosem_class_t*)&class_association_ln,
+				.logical_name = { .A = 0, /*.B = 0*/ .C = 40, .D = 0, .E = 0, .F = 255 },
+		},
 };
 
-struct cosem_object_t *cosem_association_get_object(struct cosem_ctx_t *ctx, struct cosem_longname_t name)
+struct cosem_object_t *cosem_association_get_object(struct cosem_ctx_t *ctx, enum spodes_association_t association)
 {
-	if (name.D != 0 || name.F != 255)
+	if (association > spodes_association_configurator) {
 		return 0;
-
-	switch (name.E)
-	{
-	case 0: // current association
-		cosem_object_current_association.base.data = &ctx->association;
-		return (struct cosem_object_t*)&cosem_object_current_association;
-
-	case 1: // guest client access
-		break;
-
-	case 2: // billing reader access
-		break;
-
-	case 3: // configurator/administrator access
-		break;
 	}
 
-	return 0;
+	cosem_object_current_association.base.logical_name.E = association;
+	cosem_object_current_association.base.data = &ctx->association;
+
+	return &cosem_object_current_association.base;
 }

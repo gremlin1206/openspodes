@@ -22,26 +22,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef COSEM_SPODES_H_
-#define COSEM_SPODES_H_
+#include <dlms/class_profile_generic.h>
+#include <dlms/profile_generic.h>
 
-struct hdlc_address_t;
-
-enum spodes_access_level_t
-{
-	spodes_access_level_public       = 0,
-	spodes_access_level_reader       = 1,
-	spodes_access_level_configurator = 2,
+static struct cosem_profile_generic_object_t cosem_object_current_association = {
+		.base = {
+				.cosem_class  = (struct cosem_class_t*)&class_profile_generic,
+				.logical_name = { .A = 1, /*.B = 0*/ .C = 99, .D = 1, .E = 0, .F = 255 },
+		},
 };
 
-enum spodes_association_t
+struct cosem_object_t* profile_generic_get_object(struct cosem_ctx_t *ctx)
 {
-	spodes_association_current,
-	spodes_association_guest,
-	spodes_association_reader,
-	spodes_association_configurator,
-};
+	if (ctx->association.spodes_access_level == spodes_access_level_public)
+		return 0;
 
-int spodes_client_address_to_access_level(struct hdlc_address_t *address);
-
-#endif /* COSEM_SPODES_H_ */
+	return &cosem_object_current_association.base;
+}

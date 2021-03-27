@@ -22,56 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef COSEM_OBJECTS_H_
-#define COSEM_OBJECTS_H_
+#ifndef DLMS_OBJECTS_H_
+#define DLMS_OBJECTS_H_
 
 #include <cosem/cosem.h>
 
-struct cosem_class_t;
+unsigned int cosem_objects_count(void);
 
-struct cosem_object_t
-{
-	struct cosem_longname_t     logical_name;
-	const struct cosem_class_t *cosem_class;
-	void *data;
-};
+struct cosem_object_t *cosem_find_object_by_name(struct cosem_ctx_t *ctx, struct cosem_longname_t name);
+struct cosem_object_t *cosem_find_object_by_index(struct cosem_ctx_t *ctx, unsigned int index);
 
-typedef int (*cosem_get_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
-                                  struct get_request_normal_t *get_request_normal, struct get_response_t *response,
-		                  struct cosem_pdu_t *output);
-
-typedef int (*cosem_set_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
-		                  struct set_request_normal_t *set_request_normal, struct set_response_t *response,
-				  struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
-
-typedef int (*cosem_action_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
-                                     struct action_request_normal_t *request, struct action_response_t *response,
-				     struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
-
-typedef int (*coset_get_object_metadata_t)(struct cosem_object_t *obj, struct cosem_pdu_t *output);
-
-struct cosem_class_t
-{
-	unsigned short class_id;
-	unsigned char  version;
-
-	cosem_get_normal_t      get_normal;
-	cosem_set_normal_t      set_normal;
-	cosem_action_normal_t   action_normal;
-
-	coset_get_object_metadata_t get_metadata;
-};
-
-int cosem_object_get_request(struct cosem_ctx_t *ctx,
-	                     struct get_request_t *request, struct get_response_t *response,
-		             struct cosem_pdu_t *output);
-
-int cosem_object_set_request(struct cosem_ctx_t *ctx,
-	                     struct set_request_t *request, struct set_response_t *response,
-			     struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
-
-int cosem_object_action(struct cosem_ctx_t *ctx,
-                        struct action_request_t *request, struct action_response_t *response,
-			struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
-
-#endif /* COSEM_OBJECTS_H_ */
+#endif /* DLMS_OBJECTS_H_ */

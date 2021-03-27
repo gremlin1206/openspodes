@@ -22,26 +22,45 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef COSEM_SPODES_H_
-#define COSEM_SPODES_H_
+#include <dlms/class.h>
+#include <dlms/object.h>
 
-struct hdlc_address_t;
+#ifndef DLMS_CLASS_PROFILE_GENERIC_H_
+#define DLMS_CLASS_PROFILE_GENERIC_H_
 
-enum spodes_access_level_t
+/*
+ * Class ID 7
+ */
+
+enum class_profile_generic_attribute_t
 {
-	spodes_access_level_public       = 0,
-	spodes_access_level_reader       = 1,
-	spodes_access_level_configurator = 2,
+	profile_generic_zero_attribute,
+
+	profile_generic_logical_name,
+	profile_generic_buffer,
+	profile_generic_capture_objects,
+	profile_generic_capture_period,
+	profile_generic_sort_method,
+	profile_generic_sort_object,
+	profile_generic_entries_in_use,
+	profile_generic_profile_entries,
 };
 
-enum spodes_association_t
+enum class_profile_generic_method_t
 {
-	spodes_association_current,
-	spodes_association_guest,
-	spodes_association_reader,
-	spodes_association_configurator,
+	profile_generic_zero_method,
+
+	profile_generic_reset,
+	profile_generic_capture,
+	profile_generic_get_buffer_by_range,
+	profile_generic_get_buffer_by_index,
 };
 
-int spodes_client_address_to_access_level(struct hdlc_address_t *address);
+struct cosem_profile_generic_object_t
+{
+	struct cosem_object_t base; // must be the first struct member
+};
 
-#endif /* COSEM_SPODES_H_ */
+extern const struct cosem_class_t class_profile_generic;
+
+#endif /* DLMS_CLASS_PROFILE_GENERIC_H_ */

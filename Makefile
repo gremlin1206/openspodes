@@ -9,11 +9,14 @@ OBJS += cosem/association.o
 OBJS += cosem/cosem.o
 OBJS += cosem/pdu.o
 
-OBJS += dlms/class_association_ln.o
 OBJS += dlms/class.o
 OBJS += dlms/data.o
+OBJS += dlms/object.o
 OBJS += dlms/objects.o
 OBJS += dlms/dlms.o
+OBJS += dlms/profile_generic.o
+OBJS += dlms/class_association_ln.o
+OBJS += dlms/class_profile_generic.o
 
 OBJS += crypto/aes-gcm.o
 OBJS += crypto/aes-internal-enc.o

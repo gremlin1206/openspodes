@@ -73,8 +73,8 @@ int dlms_put_integer(dlms_integer_t value, struct cosem_pdu_t *output);
 int dlms_put_long_unsigned(dlms_long_unsigned_t value, struct cosem_pdu_t *output);
 int dlms_put_unsigned(dlms_unsigned_t value, struct cosem_pdu_t *output);
 int dlms_put_enum(int value, struct cosem_pdu_t *output);
-int dlms_put_structure(int members, struct cosem_pdu_t *output);
-int dlms_put_array(int items, struct cosem_pdu_t *output);
+int dlms_put_structure(unsigned int members, struct cosem_pdu_t *output);
+int dlms_put_array(unsigned int items, struct cosem_pdu_t *output);
 int dlms_put_octet_string(unsigned char *string, unsigned int length, struct cosem_pdu_t *output);
 int dlms_put_logical_name(struct cosem_longname_t logical_name, struct cosem_pdu_t *output);
 

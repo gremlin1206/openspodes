@@ -25,9 +25,9 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 
-#include <dlms/objects.h>
 #include <cosem/asn1.h>
 #include <cosem/cosem.h>
+#include "../dlms/object.h"
 
 static int cosem_encode_exception(enum cosem_state_error_t state_error, enum cosem_service_error_t service_error, struct cosem_pdu_t *output)
 {
@@ -666,6 +666,12 @@ static int cosem_decode_attribute_descriptor(struct cosem_attribute_descriptor_t
 	instance_id.D = p[3];
 	instance_id.E = p[4];
 	instance_id.F = p[5];
+
+	if (instance_id.D > 127 || instance_id.E > 127) {
+		printf("OBIS overflow D or E\n");
+		return -1;
+	}
+
 	attribute_descriptor->instance_id = instance_id;
 
 	ret = asn_get_uint8((unsigned char*)&attribute_descriptor->attribute_id, pdu);

@@ -25,8 +25,8 @@ SOFTWARE.
 #ifndef COSEM_CLASS_ASSOCIATION_LN_H_
 #define COSEM_CLASS_ASSOCIATION_LN_H_
 
-#include "objects.h"
-#include "class.h"
+#include <dlms/class.h>
+#include <dlms/object.h>
 
 /*
  * Class ID 15

@@ -62,12 +62,12 @@ int dlms_put_enum(int value, struct cosem_pdu_t *output)
 	return dlms_put_uint8((unsigned char)value, dlms_enum, output);
 }
 
-int dlms_put_structure(int members, struct cosem_pdu_t *output)
+int dlms_put_structure(unsigned int members, struct cosem_pdu_t *output)
 {
 	return dlms_put_uint8((unsigned char)members, dlms_structure, output);
 }
 
-int dlms_put_array(int items, struct cosem_pdu_t *output)
+int dlms_put_array(unsigned int items, struct cosem_pdu_t *output)
 {
 	return dlms_put_uint8((unsigned char)items, dlms_array, output);
 }
