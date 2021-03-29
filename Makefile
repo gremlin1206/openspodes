@@ -21,6 +21,12 @@ OBJS += dlms/class_profile_generic.o
 OBJS += dlms/class_data.o
 OBJS += dlms/class_clock.o
 OBJS += dlms/class_register.o
+OBJS += dlms/class_activity_calendar.o
+OBJS += dlms/class_limiter.o
+OBJS += dlms/class_demand.o
+OBJS += dlms/class_special_days_table.o
+OBJS += dlms/class_disconnect_control.o
+OBJS += dlms/class_push_setup.o
 
 OBJS += crypto/aes-gcm.o
 OBJS += crypto/aes-internal-enc.o

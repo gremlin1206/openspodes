@@ -29,6 +29,12 @@ SOFTWARE.
 #include <dlms/class_profile_generic.h>
 #include <dlms/class_clock.h>
 #include <dlms/class_register.h>
+#include <dlms/class_activity_calendar.h>
+#include <dlms/class_limiter.h>
+#include <dlms/class_demand.h>
+#include <dlms/class_special_days_table.h>
+#include <dlms/class_disconnect_control.h>
+#include <dlms/class_push_setup.h>
 
 #include <dlms/objects.h>
 
@@ -172,7 +178,7 @@ struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned
 
 	case OBJECT_ID(1,0,4,8,0,255): // reactive energy export
 	case __COUNTER__:
-		id = OBJECT_ID(1,0,4,5,0,255);
+		id = OBJECT_ID(1,0,4,8,0,255);
 		object.base.cosem_class = &class_register;
 		object.base.spodes_access_level = spodes_access_level_reader;
 		break;
@@ -217,6 +223,13 @@ struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned
 	case OBJECT_ID(1,0,3,29,0,255): // reactive energy import in load profile interval
 	case __COUNTER__:
 		id = OBJECT_ID(1,0,3,29,0,255);
+		object.base.cosem_class = &class_register;
+		object.base.spodes_access_level = spodes_access_level_reader;
+		break;
+
+	case OBJECT_ID(1,0,4,29,0,255): // reactive energy export in load profile interval
+	case __COUNTER__:
+		id = OBJECT_ID(1,0,4,29,0,255);
 		object.base.cosem_class = &class_register;
 		object.base.spodes_access_level = spodes_access_level_reader;
 		break;
@@ -328,6 +341,7 @@ struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned
 		break;
 
 	case OBJECT_ID(0,0,13,0,0,255):
+	case __COUNTER__:
 		id = OBJECT_ID(0,0,13,0,0,255);
 		object.base.cosem_class = &class_activity_calendar;
 		object.base.spodes_access_level = spodes_access_level_reader;
@@ -362,24 +376,28 @@ struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned
 		break;
 
 	case OBJECT_ID(0,0,17,0,0,255): // power limiter
+	case __COUNTER__:
 		id = OBJECT_ID(0,0,17,0,0,255);
 		object.base.cosem_class = &class_limiter;
 		object.base.spodes_access_level = spodes_access_level_reader;
 		break;
 
 	case OBJECT_ID(0,0,17,0,1,255): // current limiter
+	case __COUNTER__:
 		id = OBJECT_ID(0,0,17,0,1,255);
 		object.base.cosem_class = &class_limiter;
 		object.base.spodes_access_level = spodes_access_level_reader;
 		break;
 
 	case OBJECT_ID(0,0,17,0,2,255): // voltage limiter
+	case __COUNTER__:
 		id = OBJECT_ID(0,0,17,0,2,255);
 		object.base.cosem_class = &class_limiter;
 		object.base.spodes_access_level = spodes_access_level_reader;
 		break;
 
 	case OBJECT_ID(0,0,17,0,3,255): // magnetic field limiter
+	case __COUNTER__:
 		id = OBJECT_ID(0,0,17,0,3,255);
 		object.base.cosem_class = &class_limiter;
 		object.base.spodes_access_level = spodes_access_level_reader;
@@ -432,7 +450,7 @@ struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned
 
 	case OBJECT_ID(0,0,96,5,3,255): // push setup
 	case __COUNTER__:
-		id = OBJECT_ID(0,0,96,3,10,255);
+		id = OBJECT_ID(0,0,96,5,3,255);
 		object.base.cosem_class = &class_push_setup;
 		object.base.spodes_access_level = spodes_access_level_reader;
 		break;
@@ -468,13 +486,6 @@ struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned
 	case OBJECT_ID(0,0,99,98,5,255): // event log (communication events)
 	case __COUNTER__:
 		id = OBJECT_ID(0,0,99,98,5,255);
-		object.base.cosem_class = &class_profile_generic;
-		object.base.spodes_access_level = spodes_access_level_reader;
-		break;
-
-	case OBJECT_ID(0,0,99,98,6,255): // event log (communication events)
-	case __COUNTER__:
-		id = OBJECT_ID(0,0,99,98,6,255);
 		object.base.cosem_class = &class_profile_generic;
 		object.base.spodes_access_level = spodes_access_level_reader;
 		break;
@@ -597,9 +608,9 @@ struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned
 		object.data.value.unsigned_value = 60;
 		break;
 
-	case OBJECT_ID(0,0,96,20,2,255): // total duration of box open
+	case OBJECT_ID(0,0,96,20,3,255): // total duration of box open
 	case __COUNTER__:
-		id = OBJECT_ID(0,0,96,20,2,255);
+		id = OBJECT_ID(0,0,96,20,3,255);
 		object.base.cosem_class = &class_data;
 		object.base.spodes_access_level = spodes_access_level_reader;
 
@@ -679,7 +690,7 @@ struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned
 
 	case OBJECT_ID(0,0,96,20,18,255): // total duration of magnetic sensor events
 	case __COUNTER__:
-		id = OBJECT_ID(0,0,96,20,17,255);
+		id = OBJECT_ID(0,0,96,20,18,255);
 		object.base.cosem_class = &class_data;
 		object.base.spodes_access_level = spodes_access_level_reader;
 
