@@ -25,32 +25,25 @@ SOFTWARE.
 #ifndef DLMS_VARIANT_H_
 #define DLMS_VARIANT_H_
 
+#include <dlms/data.h>
 
-
-typedef unsigned short dlms_long_unsigned_t;
-typedef unsigned char dlms_unsigned_t;
-
-struct dlsm_variant_t
+typedef struct
 {
 	enum dlms_data_type_t type;
 
 	union {
-		unsigned char      unsigned8;
-		signed char        integer8;
-		unsigned short     unsigned16;
-		short              integer16;
-		unsigned int       unsigned32;
-		int                integer32;
-		unsigned long long unsigned64;
-		long long          integer64;
+		dlms_integer_t        integer_value;
+		dlms_unsigned_t       unsigned_value;
+		dlms_enum_t           enum_value;
+		dlms_long_unsigned_t  long_unsigned_value;
 
 		struct {
-			void *data;
+			unsigned char *string;
 			unsigned int length;
-		} buffer;
+		} octet_string_value;
 	};
-};
+} dlms_variant_t;
 
-int dlms_variant_encode(unsigned char *buffer, const struct dlsm_variant_t *variant);
+int dlms_put_variant(const dlms_variant_t *variant, struct cosem_pdu_t *output);
 
 #endif /* DLMS_VARIANT_H_ */

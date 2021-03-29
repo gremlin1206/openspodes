@@ -30,15 +30,14 @@ SOFTWARE.
 #include <cosem/types.h>
 
 #include <dlms/data.h>
-#include <dlms/class_profile_generic.h>
+#include <dlms/objects.h>
+#include <dlms/class_data.h>
 
 static int get_attributes(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output)
 {
 	int ret;
-	dlms_integer_t buffer_access_selectors[] = {1, 2};
 
-	ret = encode_attribute_access_item(profile_generic_buffer, attribute_read_only,
-			buffer_access_selectors, sizeof(buffer_access_selectors), output);
+	ret = encode_attribute_access_item(data_value, attribute_read_only, 0, 0, output);
 	if (ret < 0)
 		return ret;
 
@@ -49,10 +48,14 @@ static int get_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
                       struct get_request_normal_t *get_request_normal, struct get_response_t *response,
                       struct cosem_pdu_t *output)
 {
+	struct cosem_data_object_t *data_object = (struct cosem_data_object_t*)object;
 	printf("class profile_generic: get attribute\n");
 
 	switch (get_request_normal->cosem_attribute_descriptor.attribute_id)
 	{
+	case data_value:
+		return dlms_put_variant(&data_object->value, output);
+
 	default:
 		response->get_response_normal.result = access_result_other_reason;
 		break;
@@ -62,27 +65,10 @@ static int get_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
 	return 0;
 }
 
-static int action_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
-                         struct action_request_normal_t *action_request_normal, struct action_response_t *response,
-		         struct cosem_pdu_t *pdu, struct cosem_pdu_t *output)
-{
-	printf("class profile_generic: action\n");
-
-	switch (action_request_normal->cosem_method_descriptor.method_id)
-	{
-	default:
-		response->action_response_normal.result = action_result_other_reason;
-		break;
-	}
-
-	return 0;
-}
-
-const struct cosem_class_t class_profile_generic = {
-	.class_id = 7,
+const struct cosem_class_t class_data = {
+	.class_id = 1,
 	.version  = 0,
 
-	.get_normal           = get_normal,
-	.action_normal        = action_normal,
-	.get_attributes       = get_attributes,
+	.get_normal     = get_normal,
+	.get_attributes = get_attributes,
 };

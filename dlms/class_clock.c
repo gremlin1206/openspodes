@@ -30,19 +30,17 @@ SOFTWARE.
 #include <cosem/types.h>
 
 #include <dlms/data.h>
-#include <dlms/class_profile_generic.h>
+#include <dlms/class_clock.h>
 
 static int get_attributes(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output)
 {
-	int ret;
-	dlms_integer_t buffer_access_selectors[] = {1, 2};
+	//int ret;
 
-	ret = encode_attribute_access_item(profile_generic_buffer, attribute_read_only,
-			buffer_access_selectors, sizeof(buffer_access_selectors), output);
-	if (ret < 0)
-		return ret;
+	//ret = encode_attribute_access_item(clock_time, attribute_read_only, 0, 0, output);
+	//if (ret < 0)
+	//	return ret;
 
-	return 1;
+	return 0;
 }
 
 static int get_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
@@ -78,8 +76,8 @@ static int action_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
 	return 0;
 }
 
-const struct cosem_class_t class_profile_generic = {
-	.class_id = 7,
+const struct cosem_class_t class_clock = {
+	.class_id = 8,
 	.version  = 0,
 
 	.get_normal           = get_normal,

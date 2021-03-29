@@ -686,15 +686,30 @@ static int cosem_decode_attribute_descriptor(struct cosem_attribute_descriptor_t
 //   00 00 28 00 00 FF instance-id
 //   01 attribute-id
 //   00 access-selection (00 means not present)
-static int cosem_decode_get_request_normal(struct get_request_normal_t *get_request_normal, struct cosem_pdu_t *pdu)
+static int cosem_decode_get_request_normal(struct get_request_normal_t *request, struct cosem_pdu_t *pdu)
 {
 	int ret;
 
-	ret = asn_get_uint8(&get_request_normal->invoke_id_and_priority.byte, pdu);
+	ret = asn_get_uint8(&request->invoke_id_and_priority.byte, pdu);
 	if (ret < 0)
 		return ret;
 
-	ret = cosem_decode_attribute_descriptor(&get_request_normal->cosem_attribute_descriptor, pdu);
+	ret = cosem_decode_attribute_descriptor(&request->cosem_attribute_descriptor, pdu);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static int cosem_decode_get_request_next(struct get_request_next_t *request, struct cosem_pdu_t *pdu)
+{
+	int ret;
+
+	ret = asn_get_uint8(&request->invoke_id_and_priority.byte, pdu);
+	if (ret < 0)
+		return ret;
+
+	ret = asn_get_uint32(&request->block_number, pdu);
 	if (ret < 0)
 		return ret;
 
@@ -733,7 +748,7 @@ static int cosem_decode_get_request(struct get_request_t *request, struct cosem_
 		break;
 
 	case get_request_next_type:
-		ret = -1;
+		ret = cosem_decode_get_request_next(&request->get_request_next, pdu);
 		break;
 
 	case get_request_with_list_type:
@@ -854,15 +869,42 @@ static int cosem_encode_data_result(enum data_access_result_t data_access_result
 	return ret;
 }
 
-static int cosem_encode_get_response_normal(struct get_response_normal_t *get_response_normal, struct cosem_pdu_t *output)
+static int cosem_encode_get_response_normal(struct get_response_normal_t *response, struct cosem_pdu_t *output)
 {
 	int ret;
 
-	ret = cosem_encode_data_result(get_response_normal->result, output);
+	ret = cosem_encode_data_result(response->result, output);
 	if (ret < 0)
 		return ret;
 
-	ret = asn_put_uint8(get_response_normal->invoke_id_and_priority.byte, output);
+	ret = asn_put_uint8(response->invoke_id_and_priority.byte, output);
+	if (ret < 0)
+		return ret;
+
+	return ret;
+}
+
+static int cosem_encode_get_response_with_datablock(struct get_response_with_datablock_t *response, struct cosem_pdu_t *output)
+{
+	int ret;
+
+	ret = asn_put_length(output->length, output);
+	if (ret < 0)
+		return ret;
+
+	ret = cosem_encode_data_result(response->result, output);
+	if (ret < 0)
+		return ret;
+
+	ret = asn_put_uint32(response->block_number, output);
+	if (ret < 0)
+		return ret;
+
+	ret = asn_put_uint8(response->last_block, output);
+	if (ret < 0)
+		return ret;
+
+	ret = asn_put_uint8(response->invoke_id_and_priority.byte, output);
 	if (ret < 0)
 		return ret;
 
@@ -880,7 +922,7 @@ static int cosem_encode_get_response(struct get_response_t *response, struct cos
 		break;
 
 	case get_response_with_datablock:
-		ret = -1;
+		ret = cosem_encode_get_response_with_datablock(&response->get_response_with_datablock, output);
 		break;
 
 	case get_response_with_list:
@@ -1137,6 +1179,12 @@ static int cosem_process_get_request(struct cosem_ctx_t *ctx, enum spodes_access
 		goto exception;
 	}
 
+	unsigned int i;
+	printf("output pdu: %u\n", output->length);
+	for (i = 0; i < output->length; i++)
+		printf("%02X ", output->head[i]);
+	printf("\n");
+
 	return 0;
 
 exception:
@@ -1268,11 +1316,14 @@ int cosem_init(struct cosem_ctx_t *ctx)
 {
 	memset(ctx, 0, sizeof(*ctx));
 
-	memcpy(ctx->hls_auth_key.bytes, "SettingRiM489.2X", 16);
+	memcpy(ctx->hls_auth_key.bytes, "1234567890ABCDEF", 16);
 	ctx->hls_auth_key.length = 16;
 
 	memcpy(ctx->lls_auth_key.bytes, "Reader", 6);
 	ctx->lls_auth_key.length = 16;
+
+	memcpy(ctx->device_logical_name.data, "TST0120123456789", 16);
+	ctx->device_logical_name.length = 16;
 
 	return 0;
 }

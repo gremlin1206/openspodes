@@ -22,34 +22,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#include <dlms/variant.h>
 
-#include <cosem/types.h>
-#include <cosem/pdu.h>
-#include <cosem/association.h>
-#include <spodes/spodes.h>
-
-struct cosem_block_transfer_t
+int dlms_put_variant(const dlms_variant_t *variant, struct cosem_pdu_t *output)
 {
-	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
-};
+	switch (variant->type)
+	{
+	case dlms_unsigned:
+		return dlms_put_unsigned(variant->unsigned_value, output);
 
-struct cosem_ctx_t
-{
-	unsigned short server_max_receive_pdu_size;
-	struct cosem_key_t hls_auth_key;
-	struct cosem_key_t lls_auth_key;
-	struct spodes_device_logical_name_t device_logical_name;
-	struct cosem_association_t association;
+	case dlms_octet_string:
+		return dlms_put_octet_string(variant->octet_string_value.string, variant->octet_string_value.length, output);
 
-	struct cosem_block_transfer_t block_transfer;
-};
-
-int cosem_input(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level,
-		struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu);
-void cosem_close_association(struct cosem_ctx_t *ctx);
-
-int cosem_init(struct cosem_ctx_t *ctx);
-
-#endif /* OPENSPODES_COSEM_H */
+	default:
+		return -1;
+	}
+}

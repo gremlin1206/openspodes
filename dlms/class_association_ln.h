@@ -64,6 +64,7 @@ enum class_association_ln_method_t
 struct cosem_association_ln_object_t
 {
 	struct cosem_object_t base; // must be the first struct member
+	struct cosem_association_t *association;
 };
 
 extern const struct cosem_class_t class_association_ln;

@@ -127,11 +127,17 @@ struct invoke_id_and_priority_t
 
 struct cosem_longname_t
 {
-	unsigned char A : 1;
-	unsigned char D : 7;
-	unsigned char C;
-	unsigned char E;
-	unsigned char F;
+	union {
+		struct {
+			unsigned char A : 1;
+			unsigned char D : 7;
+			unsigned char C;
+			unsigned char E;
+			unsigned char F;
+		};
+
+		unsigned int value;
+	};
 };
 
 struct cosem_key_t
@@ -366,8 +372,14 @@ enum action_response_type_t
 
 struct get_request_normal_t
 {
-	struct invoke_id_and_priority_t invoke_id_and_priority;
+	struct invoke_id_and_priority_t     invoke_id_and_priority;
 	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
+};
+
+struct get_request_next_t
+{
+	struct invoke_id_and_priority_t     invoke_id_and_priority;
+	unsigned int                        block_number;
 };
 
 struct get_request_t
@@ -375,6 +387,7 @@ struct get_request_t
 	enum get_request_type_t type;
 	union {
 		struct get_request_normal_t get_request_normal;
+		struct get_request_next_t   get_request_next;
 	};
 };
 
@@ -384,11 +397,20 @@ struct get_response_normal_t
 	enum data_access_result_t       result;
 };
 
+struct get_response_with_datablock_t
+{
+	struct invoke_id_and_priority_t invoke_id_and_priority;
+	unsigned char                   last_block;
+	unsigned int                    block_number;
+	enum data_access_result_t       result;
+};
+
 struct get_response_t
 {
 	enum get_response_type_t type;
 	union {
 		struct get_response_normal_t get_response_normal;
+		struct get_response_with_datablock_t get_response_with_datablock;
 	};
 };
 

@@ -34,6 +34,10 @@ typedef int (*cosem_get_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t
                                   struct get_request_normal_t *get_request_normal, struct get_response_t *response,
 		                  struct cosem_pdu_t *output);
 
+typedef int (*cosem_get_next_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
+                                struct get_request_next_t *request, struct get_response_t *response,
+		                struct cosem_pdu_t *output);
+
 typedef int (*cosem_set_normal_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
 		                  struct set_request_normal_t *set_request_normal, struct set_response_t *response,
 				  struct cosem_pdu_t *pdu, struct cosem_pdu_t *output);
@@ -44,16 +48,21 @@ typedef int (*cosem_action_normal_t)(struct cosem_ctx_t *ctx, struct cosem_objec
 
 typedef int (*cosem_get_object_access_rights_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output);
 
+typedef int (*cosem_get_attributes_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output);
+typedef int (*cosem_get_methods_t)(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output);
+
 struct cosem_class_t
 {
 	unsigned short class_id;
 	unsigned char  version;
 
 	cosem_get_normal_t      get_normal;
+	cosem_get_next_t        get_next;
 	cosem_set_normal_t      set_normal;
 	cosem_action_normal_t   action_normal;
 
-	cosem_get_object_access_rights_t get_object_access_rights;
+	cosem_get_attributes_t  get_attributes;
+	cosem_get_methods_t     get_methods;
 };
 
 enum method_access_mode_t

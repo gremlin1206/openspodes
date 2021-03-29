@@ -61,6 +61,8 @@ static int cosem_object_get_request_normal(struct cosem_ctx_t *ctx,
 	struct cosem_object_t *object;
 
 	response->type = get_response_normal_type;
+	response->get_response_normal.result = access_result_success;
+	response->get_response_normal.invoke_id_and_priority = get_request_normal->invoke_id_and_priority;
 
 	object = cosem_find_object_by_name(ctx, get_request_normal->cosem_attribute_descriptor.instance_id);
 	if (!object) {
@@ -82,8 +84,6 @@ static int cosem_object_get_request_normal(struct cosem_ctx_t *ctx,
 		if (ret < 0)
 			return ret;
 
-		response->get_response_normal.result = access_result_success;
-
 		return 0;
 	}
 
@@ -94,6 +94,36 @@ static int cosem_object_get_request_normal(struct cosem_ctx_t *ctx,
 	}
 
 	return cosem_class->get_normal(ctx, object, get_request_normal, response, output);
+}
+
+static int cosem_object_get_request_next(struct cosem_ctx_t *ctx,
+		                           struct get_request_next_t *request, struct get_response_t *response,
+					   struct cosem_pdu_t *output)
+{
+	struct cosem_object_t *object;
+	const struct cosem_class_t *cosem_class;
+
+	printf("cosem_object_get_request_next\n");
+
+	response->type = get_response_with_datablock;
+	response->get_response_with_datablock.result = access_result_success;
+	response->get_response_with_datablock.invoke_id_and_priority = request->invoke_id_and_priority;
+
+	object = cosem_find_object_by_name(ctx, ctx->block_transfer.cosem_attribute_descriptor.instance_id);
+	if (!object) {
+		printf("cosem_process_get_request: object not found\n");
+		response->get_response_normal.result = access_result_object_unavailable;
+		return 0;
+	}
+
+	cosem_class = object->cosem_class;
+
+	if (cosem_class->get_next == 0) {
+		response->get_response_with_datablock.result = access_result_other_reason;
+		return 0;
+	}
+
+	return cosem_class->get_next(ctx, object, request, response, output);
 }
 
 int cosem_object_get_request(struct cosem_ctx_t *ctx,
@@ -114,7 +144,7 @@ int cosem_object_get_request(struct cosem_ctx_t *ctx,
 		break;
 
 	case get_request_next_type:
-		ret = -1;
+		ret = cosem_object_get_request_next(ctx, &request->get_request_next, response, output);
 		break;
 
 	case get_request_with_list_type:

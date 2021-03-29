@@ -11,12 +11,16 @@ OBJS += cosem/pdu.o
 
 OBJS += dlms/class.o
 OBJS += dlms/data.o
+OBJS += dlms/variant.o
 OBJS += dlms/object.o
 OBJS += dlms/objects.o
 OBJS += dlms/dlms.o
 OBJS += dlms/profile_generic.o
 OBJS += dlms/class_association_ln.o
 OBJS += dlms/class_profile_generic.o
+OBJS += dlms/class_data.o
+OBJS += dlms/class_clock.o
+OBJS += dlms/class_register.o
 
 OBJS += crypto/aes-gcm.o
 OBJS += crypto/aes-internal-enc.o

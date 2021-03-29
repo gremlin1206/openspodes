@@ -42,6 +42,12 @@ enum spodes_association_t
 	spodes_association_configurator,
 };
 
+struct spodes_device_logical_name_t
+{
+	unsigned char data[16];
+	unsigned char length;
+};
+
 int spodes_client_address_to_access_level(struct hdlc_address_t *address);
 
 #endif /* COSEM_SPODES_H_ */

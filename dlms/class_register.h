@@ -22,34 +22,58 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#ifndef DLMS_CLASS_REGISTER_H_
+#define DLMS_CLASS_REGISTER_H_
 
-#include <cosem/types.h>
-#include <cosem/pdu.h>
-#include <cosem/association.h>
-#include <spodes/spodes.h>
+#include <dlms/class.h>
+#include <dlms/object.h>
+#include <dlms/variant.h>
 
-struct cosem_block_transfer_t
+enum dlms_physical_unit_t
 {
-	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
+	dlms_unit_year = 1,
+	dlms_unit_month,
+	dlms_unit_week,
+	dlms_unit_dya,
+	dlms_unit_hour,
+	dlms_unit_min,
+	dlms_unit_second,
+	dlms_unit_degree,
+	dlms_unit_degree_celcius,
+	dlms_unit_metre,
+	dlms_unit_metre_per_second,
+
+	// TODO: complete the list
 };
 
-struct cosem_ctx_t
-{
-	unsigned short server_max_receive_pdu_size;
-	struct cosem_key_t hls_auth_key;
-	struct cosem_key_t lls_auth_key;
-	struct spodes_device_logical_name_t device_logical_name;
-	struct cosem_association_t association;
+/*
+ * Class ID 3
+ */
 
-	struct cosem_block_transfer_t block_transfer;
+enum class_register_attribute_t
+{
+	register_zero_attribute,
+
+	register_logical_name,
+	register_value,
+	register_scaler_unit,
 };
 
-int cosem_input(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level,
-		struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu);
-void cosem_close_association(struct cosem_ctx_t *ctx);
+enum class_register_method_t
+{
+	register_zero_method,
 
-int cosem_init(struct cosem_ctx_t *ctx);
+	register_reset,
+};
 
-#endif /* OPENSPODES_COSEM_H */
+struct cosem_register_object_t
+{
+	struct cosem_object_t base; // must be the first struct member
+	dlms_variant_t value;
+	dlms_integer_t scaler;
+	dlms_enum_t    unit;
+};
+
+extern const struct cosem_class_t class_register;
+
+#endif /* DLMS_CLASS_REGISTER_H_ */

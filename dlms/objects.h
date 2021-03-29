@@ -30,6 +30,6 @@ SOFTWARE.
 unsigned int cosem_objects_count(void);
 
 struct cosem_object_t *cosem_find_object_by_name(struct cosem_ctx_t *ctx, struct cosem_longname_t name);
-struct cosem_object_t *cosem_find_object_by_index(struct cosem_ctx_t *ctx, unsigned int index);
+struct cosem_object_t *cosem_find_object_by_id(struct cosem_ctx_t *ctx, unsigned int index);
 
 #endif /* DLMS_OBJECTS_H_ */

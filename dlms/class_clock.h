@@ -22,34 +22,48 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#ifndef DLMS_CLASS_CLOCK_H_
+#define DLMS_CLASS_CLOCK_H_
 
-#include <cosem/types.h>
-#include <cosem/pdu.h>
-#include <cosem/association.h>
-#include <spodes/spodes.h>
+#include <dlms/class.h>
+#include <dlms/object.h>
 
-struct cosem_block_transfer_t
+/*
+ * Class ID 8
+ */
+
+enum class_clock_attribute_t
 {
-	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
+	clock_zero_attribute,
+
+	clock_logical_name,
+	clock_time,
+	clock_time_zone,
+	clock_status,
+	clock_daylight_savings_begin,
+	clock_daylight_savings_end,
+	clock_daylight_savings_deviation,
+	clock_daylight_savings_enabled,
+	clock_clock_base,
 };
 
-struct cosem_ctx_t
+enum class_clock_method_t
 {
-	unsigned short server_max_receive_pdu_size;
-	struct cosem_key_t hls_auth_key;
-	struct cosem_key_t lls_auth_key;
-	struct spodes_device_logical_name_t device_logical_name;
-	struct cosem_association_t association;
+	clock_zero_method,
 
-	struct cosem_block_transfer_t block_transfer;
+	clock_adjust_to_quarter,
+	clock_adjust_to_measuring_period,
+	clock_adjust_to_minute,
+	clock_adjust_to_preset_time,
+	clock_preset_adjusting_time,
+	clock_shift_time,
 };
 
-int cosem_input(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level,
-		struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu);
-void cosem_close_association(struct cosem_ctx_t *ctx);
+struct cosem_clock_object_t
+{
+	struct cosem_object_t base; // must be the first struct member
+};
 
-int cosem_init(struct cosem_ctx_t *ctx);
+extern const struct cosem_class_t class_clock;
 
-#endif /* OPENSPODES_COSEM_H */
+#endif /* DLMS_CLASS_CLOCK_H_ */

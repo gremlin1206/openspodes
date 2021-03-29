@@ -304,7 +304,7 @@ int cosem_association_open(struct cosem_ctx_t *ctx, struct cosem_association_t *
 	initiate_response->negotiated_conformance.action = 1;
 	initiate_response->negotiated_conformance.block_transfer_with_get_or_read = 1;
 
-	initiate_response->server_max_receive_pdu_size = 1024; // TODO: take it from context
+	initiate_response->server_max_receive_pdu_size = ctx->server_max_receive_pdu_size;
 
 	a->mechanism_name         = aarq->mechanism_name;
 	a->calling_authentication = aarq->calling_authentication;
@@ -337,7 +337,7 @@ struct cosem_object_t *cosem_association_get_object(struct cosem_ctx_t *ctx, enu
 	}
 
 	cosem_object_current_association.base.logical_name.E = association;
-	cosem_object_current_association.base.data = &ctx->association;
+	cosem_object_current_association.association = &ctx->association;
 
 	return &cosem_object_current_association.base;
 }

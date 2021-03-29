@@ -22,34 +22,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef OPENSPODES_COSEM_H
-#define OPENSPODES_COSEM_H
+#ifndef DLMS_CLASS_DATA_H_
+#define DLMS_CLASS_DATA_H_
 
-#include <cosem/types.h>
-#include <cosem/pdu.h>
-#include <cosem/association.h>
-#include <spodes/spodes.h>
+#include <dlms/class.h>
+#include <dlms/object.h>
+#include <dlms/variant.h>
 
-struct cosem_block_transfer_t
+/*
+ * Class ID 1
+ */
+
+enum class_data_attribute_t
 {
-	struct cosem_attribute_descriptor_t cosem_attribute_descriptor;
+	data_ln_zero_attribute,
+
+	data_logical_name,
+	data_value,
 };
 
-struct cosem_ctx_t
+struct cosem_data_object_t
 {
-	unsigned short server_max_receive_pdu_size;
-	struct cosem_key_t hls_auth_key;
-	struct cosem_key_t lls_auth_key;
-	struct spodes_device_logical_name_t device_logical_name;
-	struct cosem_association_t association;
-
-	struct cosem_block_transfer_t block_transfer;
+	struct cosem_object_t base; // must be the first struct member
+	dlms_variant_t value;
 };
 
-int cosem_input(struct cosem_ctx_t *ctx, enum spodes_access_level_t access_level,
-		struct cosem_pdu_t *input_pdu, struct cosem_pdu_t *output_pdu);
-void cosem_close_association(struct cosem_ctx_t *ctx);
+extern const struct cosem_class_t class_data;
 
-int cosem_init(struct cosem_ctx_t *ctx);
-
-#endif /* OPENSPODES_COSEM_H */
+#endif /* DLMS_CLASS_DATA_H_ */

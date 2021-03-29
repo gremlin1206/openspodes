@@ -10,7 +10,7 @@
 #ifdef  CONFIG_DLMS_MAX_PDU_SIZE
 #  define DLMS_MAX_PDU_SIZE CONFIG_DLMS_MAX_PDU_SIZE
 #else
-#  define DLMS_MAX_PDU_SIZE 1024
+#  define DLMS_MAX_PDU_SIZE 4096
 #endif
 
 #ifdef  CONFIG_DLMS_MAX_PDU_HEADER_SIZE
@@ -168,6 +168,8 @@ int main(void)
 #endif
 
 	dlms_init(&dlms);
+
+	dlms.cosem.server_max_receive_pdu_size = DLMS_MAX_PDU_SIZE;
 
 	cosem_pdu_init(&input_pdu,  DLMS_MAX_PDU_SIZE, 0,                dlms_buffer, sizeof(dlms_buffer));
 	cosem_pdu_init(&output_pdu, DLMS_MAX_PDU_SIZE, 1 /* reversed */, dlms_buffer, sizeof(dlms_buffer));

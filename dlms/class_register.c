@@ -30,26 +30,24 @@ SOFTWARE.
 #include <cosem/types.h>
 
 #include <dlms/data.h>
-#include <dlms/class_profile_generic.h>
+#include <dlms/class_register.h>
 
 static int get_attributes(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output)
 {
-	int ret;
-	dlms_integer_t buffer_access_selectors[] = {1, 2};
+	//int ret;
 
-	ret = encode_attribute_access_item(profile_generic_buffer, attribute_read_only,
-			buffer_access_selectors, sizeof(buffer_access_selectors), output);
-	if (ret < 0)
-		return ret;
+	//ret = encode_attribute_access_item(clock_time, attribute_read_only, 0, 0, output);
+	//if (ret < 0)
+	//	return ret;
 
-	return 1;
+	return 0;
 }
 
 static int get_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
                       struct get_request_normal_t *get_request_normal, struct get_response_t *response,
                       struct cosem_pdu_t *output)
 {
-	printf("class profile_generic: get attribute\n");
+	printf("class register: get attribute\n");
 
 	switch (get_request_normal->cosem_attribute_descriptor.attribute_id)
 	{
@@ -66,7 +64,7 @@ static int action_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
                          struct action_request_normal_t *action_request_normal, struct action_response_t *response,
 		         struct cosem_pdu_t *pdu, struct cosem_pdu_t *output)
 {
-	printf("class profile_generic: action\n");
+	printf("class register: action\n");
 
 	switch (action_request_normal->cosem_method_descriptor.method_id)
 	{
@@ -78,11 +76,11 @@ static int action_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
 	return 0;
 }
 
-const struct cosem_class_t class_profile_generic = {
-	.class_id = 7,
+const struct cosem_class_t class_register = {
+	.class_id = 3,
 	.version  = 0,
 
-	.get_normal           = get_normal,
-	.action_normal        = action_normal,
-	.get_attributes       = get_attributes,
+	.get_normal      = get_normal,
+	.action_normal   = action_normal,
+	.get_attributes  = get_attributes,
 };

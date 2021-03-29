@@ -33,34 +33,111 @@ SOFTWARE.
 #include <dlms/objects.h>
 #include <dlms/class_association_ln.h>
 
-static int get_object_list_encode_item(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output)
+static int encode_object_access_rights(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
+		const struct cosem_class_t *cosem_class, struct cosem_pdu_t *output)
+{
+	int ret;
+	int count;
+
+	/* Encode Methods */
+	{
+		if (cosem_class->get_methods) {
+			ret = cosem_class->get_methods(ctx, object, output);
+			if (ret < 0) {
+				printf("encode_object_access_rights error 1\n");
+				return ret;
+			}
+			count = ret;
+		}
+		else
+			count = 0;
+
+		/*
+		 * method_access_descriptor
+		 */
+		ret = dlms_put_array(count, output);
+		if (ret < 0) {
+			printf("encode_object_access_rights error 2\n");
+			return ret;
+		}
+	}
+
+	/* Encode Attributes */
+	{
+		/*
+		 * All objects have 'logical-name' attribute with 'attribute-id = 1'
+		 */
+		ret = encode_attribute_access_item(1, attribute_read_only, 0, 0, output);
+		if (ret < 0) {
+			printf("encode_object_access_rights error 3\n");
+			return ret;
+		}
+
+		if (cosem_class->get_attributes) {
+			ret = cosem_class->get_attributes(ctx, object, output);
+			if (ret < 0) {
+				printf("pdu length: %u %u\n", output->length, output->length_limit);
+				printf("encode_object_access_rights error 4\n");
+				return ret;
+			}
+			count = ret;
+		}
+		else
+			count = 0;
+
+		/*
+		 * method_access_descriptor
+		 */
+		ret = dlms_put_array(count + 1, output);
+		if (ret < 0) {
+			printf("encode_object_access_rights error 5\n");
+			return ret;
+		}
+	}
+
+	ret = dlms_put_structure(2, output);
+	if (ret < 0) {
+		printf("encode_object_access_rights error 6\n");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int encode_object_list_item(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output)
 {
 	int ret;
 	const struct cosem_class_t *cosem_class = object->cosem_class;
 
-	if (cosem_class->get_object_access_rights == 0) {
-		return -1;
+	ret = encode_object_access_rights(ctx, object, cosem_class, output);
+	if (ret < 0) {
+		printf("encode_object_list_item error 1\n");
+		return ret;
 	}
 
-	ret = cosem_class->get_object_access_rights(ctx, object, output);
-	if (ret < 0)
-		return ret;
-
 	ret = dlms_put_logical_name(object->logical_name, output);
-	if (ret < 0)
+	if (ret < 0) {
+		printf("encode_object_list_item error 2\n");
 		return ret;
+	}
 
 	ret = dlms_put_unsigned(cosem_class->version, output);
-	if (ret < 0)
+	if (ret < 0) {
+		printf("encode_object_list_item error 3\n");
 		return ret;
+	}
 
 	ret = dlms_put_long_unsigned(cosem_class->class_id, output);
-	if (ret < 0)
+	if (ret < 0) {
+		printf("encode_object_list_item error 4\n");
 		return ret;
+	}
 
 	ret = dlms_put_structure(4, output);
-	if (ret < 0)
+	if (ret < 0) {
+		printf("encode_object_list_item error 5\n");
 		return ret;
+	}
 
 	return 0;
 }
@@ -77,12 +154,14 @@ static int get_object_list(
 	unsigned int count = cosem_objects_count();
 	struct cosem_object_t *object;
 	unsigned int objects_encoded;
+	int use_block_transfer = 0;
 
 	objects_encoded = 0;
 	for (i = 0; i < count; i++) {
-		object = cosem_find_object_by_index(ctx, i);
-		if (object) {
-			ret = get_object_list_encode_item(ctx, object, output);
+		printf("object #%u pdu: %u\n", i, output->length);
+		object = cosem_find_object_by_id(ctx, i);
+		if (object && object->spodes_access_level <= ctx->association.spodes_access_level) {
+			ret = encode_object_list_item(ctx, object, output);
 			if (ret < 0)
 				return ret;
 			objects_encoded++;
@@ -91,11 +170,25 @@ static int get_object_list(
 
 	printf("get_object_list: total objects count %u, encoded %u\n", count, objects_encoded);
 
-	ret = dlms_put_array(objects_encoded, output);
-	if (ret < 0)
-		return ret;
+	if (use_block_transfer) {
+		ctx->block_transfer.cosem_attribute_descriptor = get_request_normal->cosem_attribute_descriptor;
 
-	response->get_response_normal.result = access_result_success;
+		ret = dlms_put_array(count, output);
+				if (ret < 0)
+					return ret;
+
+		response->type = get_response_with_datablock;
+		response->get_response_with_datablock.result = access_result_success;
+		response->get_response_with_datablock.last_block = 1;
+		response->get_response_with_datablock.block_number = 17;
+	}
+	else {
+		ret = dlms_put_array(objects_encoded, output);
+		if (ret < 0)
+			return ret;
+
+		response->get_response_normal.result = access_result_success;
+	}
 
 	return 0;
 }
@@ -108,7 +201,7 @@ static int action_reply_to_hls_authentication(struct cosem_ctx_t *ctx, struct co
 	unsigned char fCtoS_output[16];
 	unsigned int fStoC_input_length;
 	unsigned char *fStoC_input;
-	struct cosem_association_t *association;
+	struct cosem_association_ln_object_t *association_object = (struct cosem_association_ln_object_t*)object;
 
 	if (!pdu) {
 		response->action_response_normal.result = action_result_other_reason;
@@ -127,9 +220,7 @@ static int action_reply_to_hls_authentication(struct cosem_ctx_t *ctx, struct co
 		return 0;
 	}
 
-	association = (struct cosem_association_t*)object->data;
-
-	ret = cosem_association_high_level_security_authentication_stage2(ctx, association, fStoC_input, fCtoS_output);
+	ret = cosem_association_high_level_security_authentication_stage2(ctx, association_object->association, fStoC_input, fCtoS_output);
 	if (ret < 0) {
 		printf("reply_to_hls_authentication: authentication failed/n");
 		response->action_response_normal.result = action_result_other_reason;
@@ -159,44 +250,22 @@ static int action_reply_to_hls_authentication(struct cosem_ctx_t *ctx, struct co
 	return 0;
 }
 
-static int get_object_access_rights(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output)
+static int get_attributes(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output)
 {
 	int ret;
-
-	/*
-	 * method_access_descriptor
-	 */
-	ret = dlms_put_array(0, output);
-	if (ret < 0)
-		return ret;
-
-	ret = encode_attribute_access_item(association_ln_logical_name, attribute_read_only, 0, 0, output);
-	if (ret < 0)
-		return ret;
 
 	ret = encode_attribute_access_item(association_ln_object_list, attribute_read_only, 0, 0, output);
 	if (ret < 0)
 		return ret;
 
-	/*
-	 * attribute_access_descriptor
-	 */
-	ret = dlms_put_array(2, output);
-	if (ret < 0)
-		return ret;
-
-	ret = dlms_put_structure(2, output);
-	if (ret < 0)
-		return ret;
-
-	return 0;
+	return 1;
 }
 
 static int get_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
                       struct get_request_normal_t *get_request_normal, struct get_response_t *response,
                       struct cosem_pdu_t *output)
 {
-	printf("class association_ln: get attribute\n");
+	printf("class association_ln: get-normal\n");
 
 	switch (get_request_normal->cosem_attribute_descriptor.attribute_id)
 	{
@@ -209,6 +278,20 @@ static int get_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
 	}
 
 	// Attribute not found
+	return 0;
+}
+
+static int get_next(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
+                    struct get_request_next_t *request, struct get_response_t *response,
+                    struct cosem_pdu_t *output)
+{
+	printf("class association_ln: get-next\n");
+
+	response->get_response_with_datablock.last_block = 1;
+	response->get_response_with_datablock.block_number = 1;
+
+	dlms_put_null(output);
+
 	return 0;
 }
 
@@ -235,7 +318,8 @@ const struct cosem_class_t class_association_ln = {
 	.class_id = 15,
 	.version  = 1,
 
-	.get_normal           = get_normal,
-	.action_normal        = action_normal,
-	.get_object_access_rights = get_object_access_rights,
+	.get_normal     = get_normal,
+	.get_next       = get_next,
+	.action_normal  = action_normal,
+	.get_attributes = get_attributes,
 };

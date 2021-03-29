@@ -33,7 +33,7 @@ struct cosem_object_t
 {
 	struct cosem_longname_t     logical_name;
 	const struct cosem_class_t *cosem_class;
-	void *data;
+	enum spodes_access_level_t  spodes_access_level;
 };
 
 int cosem_object_get_request(struct cosem_ctx_t *ctx,
