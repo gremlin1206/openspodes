@@ -38,7 +38,7 @@ enum class_activity_calendar_attribute_t
 
 	activity_calendar_logical_name,
 
-	activity_calendar_calendar_name_active,
+	activity_calendar_name_active,
 	activity_calendar_season_profile_active,
 	activity_calendar_week_profile_table_active,
 	activity_calendar_day_profile_table_active,

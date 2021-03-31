@@ -34,13 +34,13 @@ SOFTWARE.
 
 static int get_attributes(struct cosem_ctx_t *ctx, struct cosem_object_t *object, struct cosem_pdu_t *output)
 {
-	//int ret;
+	int ret;
 
-	//ret = encode_attribute_access_item(clock_time, attribute_read_only, 0, 0, output);
-	//if (ret < 0)
-	//	return ret;
+	ret = encode_attribute_access_item(activity_calendar_name_active, attribute_write_only, 0, 0, output);
+	if (ret < 0)
+		return ret;
 
-	return 0;
+	return 1;
 }
 
 static int get_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
@@ -51,12 +51,16 @@ static int get_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
 
 	switch (get_request_normal->cosem_attribute_descriptor.attribute_id)
 	{
+	case activity_calendar_name_active:
+		return dlms_put_octet_string((unsigned char*)"test", 4, output);
+
 	default:
+		// Attribute not found
 		response->get_response_normal.result = access_result_other_reason;
 		break;
 	}
 
-	// Attribute not found
+
 	return 0;
 }
 
@@ -64,6 +68,8 @@ static int action_normal(struct cosem_ctx_t *ctx, struct cosem_object_t *object,
                          struct action_request_normal_t *action_request_normal, struct action_response_t *response,
 		         struct cosem_pdu_t *pdu, struct cosem_pdu_t *output)
 {
+	//int ret;
+
 	printf("class activity_calendar: action\n");
 
 	switch (action_request_normal->cosem_method_descriptor.method_id)
